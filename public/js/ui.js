@@ -237,6 +237,36 @@ function parlayResults() {
   );
 }
 
+// ─── BET CARD (reusable for core + props) ───
+function betCard(r, idx, compact) {
+  const open = S.expandedIdx === idx, pos = r.evPct > 0;
+  const isBest = idx === 0 && pos && !compact;
+  return h('div', { style: {
+    background: isBest ? 'rgba(155,201,242,.05)' : 'rgba(255,255,255,.02)',
+    border: isBest ? '1px solid rgba(155,201,242,.12)' : '1px solid rgba(255,255,255,.04)',
+    borderRadius: compact ? '6px' : '8px', overflow: 'hidden',
+  } },
+    h('button', { style: { width: '100%', textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit', background: 'none', border: 'none', padding: compact ? '7px 10px' : '10px 12px', color: 'var(--fg)' },
+      onClick: (e) => { e.stopPropagation(); set({ expandedIdx: open ? null : idx }); } },
+      h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } },
+        h('div', { style: { flex: '1' } },
+          h('div', { style: { display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' } },
+            isBest ? h('span', { style: { fontSize: '8px', fontWeight: '700', background: 'rgba(155,201,242,.15)', color: 'var(--accent)', padding: '1px 6px', borderRadius: '3px', letterSpacing: '.5px', textTransform: 'uppercase' } }, 'Best') : null,
+            h('span', { style: { fontFamily: 'var(--display)', fontSize: compact ? '11px' : '12px', fontWeight: '600', color: '#fff' } },
+              r.outcome + ' ' + (r.point != null ? '(' + (r.point > 0 ? '+' : '') + r.point + ')' : ''))),
+          h('div', { style: { fontSize: '10px', color: 'var(--fg3)' } },
+            (compact ? '' : r.gameShort + ' \xb7 ') + r.marketLabel + ' \xb7 ' + amOdds(r.bookDecimal) + ' \xb7 Fair ' + (r.fairProb * 100).toFixed(1) + '%')),
+        h('span', { cls: 'ev-badge ' + (pos ? 'ev-pos' : 'ev-neg') }, (pos ? '+' : '') + r.evPct.toFixed(2) + '%'))),
+    open ? h('div', { style: { padding: '0 12px 12px', animation: 'fadeIn .2s' } },
+      h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px', marginBottom: '8px' } },
+        h('div', { cls: 'sbox' }, h('div', { cls: 'sl' }, 'Stake'), h('div', { cls: 'sv' }, '$' + r.stake.toFixed(0))),
+        h('div', { cls: 'sbox' }, h('div', { cls: 'sl' }, 'Fair Prob'), h('div', { cls: 'sv' }, (r.fairProb * 100).toFixed(2) + '%')),
+        h('div', { cls: 'sbox' }, h('div', { cls: 'sl' }, 'EV'), h('div', { cls: 'sv', style: { color: pos ? '#00c853' : '#ff4757' } }, (pos ? '+' : '') + '$' + r.ev.toFixed(2)))),
+      mathBlock(r.math, S.expandedMath === idx, () => set({ expandedMath: S.expandedMath === idx ? null : idx })),
+    ) : null,
+  );
+}
+
 // ─── GAME CARDS (single bet mode) ───
 function gameCards() {
   const games = S.odds || [], book = BOOKS.find(b => b.key === S.sportsbook);
@@ -246,22 +276,7 @@ function gameCards() {
     h('div', { style: { fontSize: '12px', color: 'var(--fg3)', marginBottom: '10px' } },
       games.length + ' games (' + withBook.length + ' with ' + (book?.label || '') + ')'),
     h('div', {},
-      ...(() => {
-        const edgeMap = new Map();
-        if (S.odds) {
-          const all = extractAllOutcomes(S.odds, S.sportsbook);
-          for (const o of all) {
-            if (!edgeMap.has(o.gameId) || o.edge > edgeMap.get(o.gameId)) edgeMap.set(o.gameId, o.edge);
-          }
-        }
-        return [...games].sort((a, b) => {
-          const aHasBook = a.bookmakers?.some(bk => bk.key === S.sportsbook);
-          const bHasBook = b.bookmakers?.some(bk => bk.key === S.sportsbook);
-          if (!aHasBook && bHasBook) return 1;
-          if (aHasBook && !bHasBook) return -1;
-          return (edgeMap.get(b.id) || -999) - (edgeMap.get(a.id) || -999);
-        });
-      })().map(g => {
+      ...games.map(g => {
         const hasBook = g.bookmakers?.some(b => b.key === S.sportsbook);
         const hasSharp = g.bookmakers?.some(b => SHARP.includes(b.key) && b.key !== S.sportsbook);
         const active = S.selectedGame?.id === g.id;
@@ -285,36 +300,41 @@ function gameCards() {
           active && gr ? h('div', { style: { padding: '0 12px 12px', animation: 'fadeIn .25s' } },
             h('div', { style: { borderTop: '1px solid rgba(155,201,242,.1)', paddingTop: '10px', marginTop: '2px' } },
               h('div', { style: { fontSize: '10.5px', color: 'var(--fg3)', marginBottom: '8px' } },
-                'Sharp: ' + (gr[0]?.sharpBook || 'Pinnacle') + ' · Devig: ' + (gr[0]?.devigMethod || 'Mult') + ' · ' + gr.filter(r => r.evPct > 0).length + ' +EV bets'),
+                'Sharp: ' + (gr[0]?.sharpBook || 'Pinnacle') + ' \xb7 Devig: ' + (gr[0]?.devigMethod || 'Mult') + ' \xb7 ' + gr.filter(r => r.evPct > 0).length + ' +EV bets'),
               !gr.length ? h('div', { style: { textAlign: 'center', padding: '12px', color: 'var(--fg3)', fontSize: '12px' } }, 'No matching markets.')
               : h('div', { style: { display: 'grid', gap: '5px' } },
-                ...gr.map((r, idx) => {
-                  const open = S.expandedIdx === idx, pos = r.evPct > 0;
-                  return h('div', { style: {
-                    background: idx === 0 && pos ? 'rgba(155,201,242,.05)' : 'rgba(255,255,255,.02)',
-                    border: idx === 0 && pos ? '1px solid rgba(155,201,242,.12)' : '1px solid rgba(255,255,255,.04)',
-                    borderRadius: '8px', overflow: 'hidden',
-                  } },
-                    h('button', { style: { width: '100%', textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit', background: 'none', border: 'none', padding: '10px 12px', color: 'var(--fg)' },
-                      onClick: (e) => { e.stopPropagation(); set({ expandedIdx: open ? null : idx }); } },
-                      h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } },
-                        h('div', { style: { flex: '1' } },
-                          h('div', { style: { display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' } },
-                            idx === 0 && pos ? h('span', { style: { fontSize: '8px', fontWeight: '700', background: 'rgba(155,201,242,.15)', color: 'var(--accent)', padding: '1px 6px', borderRadius: '3px', letterSpacing: '.5px', textTransform: 'uppercase' } }, 'Best') : null,
-                            h('span', { style: { fontFamily: 'var(--display)', fontSize: '12px', fontWeight: '600', color: '#fff' } },
-                              r.outcome + ' ' + (r.point != null ? '(' + (r.point > 0 ? '+' : '') + r.point + ')' : ''))),
-                          h('div', { style: { fontSize: '10px', color: 'var(--fg3)' } },
-                            r.gameShort + ' · ' + r.marketLabel + ' · ' + amOdds(r.bookDecimal) + ' · Fair ' + (r.fairProb * 100).toFixed(1) + '%')),
-                        h('span', { cls: 'ev-badge ' + (pos ? 'ev-pos' : 'ev-neg') }, (pos ? '+' : '') + r.evPct.toFixed(2) + '%'))),
-                    open ? h('div', { style: { padding: '0 12px 12px', animation: 'fadeIn .2s' } },
-                      h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px', marginBottom: '8px' } },
-                        h('div', { cls: 'sbox' }, h('div', { cls: 'sl' }, 'Stake'), h('div', { cls: 'sv' }, '$' + r.stake.toFixed(0))),
-                        h('div', { cls: 'sbox' }, h('div', { cls: 'sl' }, 'Fair Prob'), h('div', { cls: 'sv' }, (r.fairProb * 100).toFixed(2) + '%')),
-                        h('div', { cls: 'sbox' }, h('div', { cls: 'sl' }, 'EV'), h('div', { cls: 'sv', style: { color: pos ? '#00c853' : '#ff4757' } }, (pos ? '+' : '') + '$' + r.ev.toFixed(2)))),
-                      mathBlock(r.math, S.expandedMath === idx, () => set({ expandedMath: S.expandedMath === idx ? null : idx })),
-                    ) : null,
-                  );
-                })),
+                ...gr.filter(r => !r.isProp).map((r, idx) => betCard(r, idx, false)),
+                ...(() => {
+                  const props = gr.filter(r => r.isProp);
+                  if (!props.length) return [];
+                  const grouped = new Map();
+                  for (const p of props) { if (!grouped.has(p.market)) grouped.set(p.market, []); grouped.get(p.market).push(p); }
+                  const sections = [];
+                  const propCount = props.filter(p => p.evPct > 0).length;
+                  sections.push(h('div', { style: { marginTop: '8px', paddingTop: '8px', borderTop: '1px solid rgba(155,201,242,.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' } },
+                    h('span', { style: { fontSize: '11px', fontWeight: '600', color: 'var(--accent)', letterSpacing: '.3px', textTransform: 'uppercase' } }, '\u26a1 Player Props'),
+                    h('span', { style: { fontSize: '10px', color: 'var(--fg3)' } }, propCount + ' +EV prop' + (propCount !== 1 ? 's' : ''))));
+                  for (const [mkt, items] of grouped) {
+                    const catKey = 'propCat_' + g.id + '_' + mkt;
+                    const catOpen = S.expandedGroups?.[catKey];
+                    const topEV = items[0]?.evPct || 0;
+                    const posCount = items.filter(i => i.evPct > 0).length;
+                    sections.push(h('div', { style: { background: 'rgba(255,255,255,.02)', border: '1px solid rgba(255,255,255,.04)', borderRadius: '6px', overflow: 'hidden' } },
+                      h('button', { style: { width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 10px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg)', fontFamily: 'inherit' },
+                        onClick: (e) => { e.stopPropagation(); set({ expandedGroups: { ...S.expandedGroups, [catKey]: !catOpen } }); } },
+                        h('div', { style: { display: 'flex', alignItems: 'center', gap: '6px' } },
+                          h('span', { style: { fontSize: '10px', color: catOpen ? 'var(--accent)' : 'var(--fg3)', transition: 'transform .2s', display: 'inline-block', transform: catOpen ? 'rotate(90deg)' : 'rotate(0)' } }, '\u25b6'),
+                          h('span', { style: { fontSize: '11px', fontWeight: '600', color: '#fff' } }, getMarketLabel(mkt)),
+                          h('span', { style: { fontSize: '10px', color: 'var(--fg3)' } }, posCount + '/' + items.length + ' +EV')),
+                        topEV > 0 ? h('span', { style: { fontSize: '10px', color: '#00c853', fontFamily: 'var(--mono)', fontWeight: '600' } }, 'best +' + topEV.toFixed(1) + '%') : null),
+                      catOpen ? h('div', { style: { display: 'grid', gap: '3px', padding: '0 6px 6px' } },
+                        ...items.map((r, pi) => betCard(r, 'p_' + mkt + '_' + pi, true)),
+                      ) : null,
+                    ));
+                  }
+                  return sections;
+                })(),
+              ),
             )) : null,
         );
       })),

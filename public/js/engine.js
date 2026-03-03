@@ -73,6 +73,33 @@ const PRIO_SPORTS = [
   'baseball_mlb', 'boxing_boxing',
 ];
 
+// ─── MARKET LABELS ───
+const MARKET_LABELS = {
+  h2h:'ML', spreads:'Spread', totals:'Total',
+  player_points:'Points', player_rebounds:'Rebounds', player_assists:'Assists',
+  player_threes:'Threes', player_blocks:'Blocks', player_steals:'Steals',
+  player_turnovers:'Turnovers',
+  player_points_rebounds_assists:'Pts+Reb+Ast', player_points_rebounds:'Pts+Reb',
+  player_points_assists:'Pts+Ast', player_rebounds_assists:'Reb+Ast',
+  player_double_double:'Double-Double',
+  player_goals:'Goals', player_shots_on_goal:'SOG', player_shots_on_target:'Shots OT',
+  player_blocked_shots:'Blocked Shots', goalie_saves:'Saves',
+  batter_hits:'Hits', batter_total_bases:'Total Bases', batter_rbis:'RBIs',
+  batter_runs_scored:'Runs', batter_walks:'Walks',
+  batter_strikeouts:'Batter Ks', batter_home_runs:'Home Runs',
+  pitcher_strikeouts:'Pitcher Ks', pitcher_hits_allowed:'Hits Allowed',
+  pitcher_earned_runs:'Earned Runs', pitcher_outs:'Outs',
+  player_pass_yds:'Pass Yds', player_pass_tds:'Pass TDs',
+  player_pass_completions:'Completions', player_pass_attempts:'Pass Att',
+  player_pass_interceptions:'INTs',
+  player_rush_yds:'Rush Yds', player_rush_attempts:'Rush Att',
+  player_reception_yds:'Rec Yds', player_receptions:'Receptions',
+  player_anytime_td:'Anytime TD',
+};
+function getMarketLabel(k) { return MARKET_LABELS[k] || k.replace(/^(player_|batter_|pitcher_|goalie_)/,'').replace(/_/g,' '); }
+function isCoreMkt(k) { return k==='h2h'||k==='spreads'||k==='totals'; }
+function isPropMkt(k) { return !isCoreMkt(k); }
+
 // ─── MATH ───
 function impliedProb(d) { return 1 / d; }
 
@@ -262,21 +289,52 @@ function extractAllOutcomes(games, bookKey) {
 
       if (!sharpOutcomes) continue;
 
-      // Devig with market-aware method
-      const fair = removeVig(sharpOutcomes, m.key);
+      // For props: devig per-player pair (Over/Under for each description+point)
+      // For core: devig the whole market
+      const isProp = isPropMkt(m.key);
 
-      for (const o of m.outcomes) {
-        const f = fair.find(fi => fi.name === o.name && (fi.point === o.point || (!fi.point && !o.point)));
-        if (!f) continue;
-        out.push({
-          gameId: g.id, game: `${g.away_team} @ ${g.home_team}`,
-          gameShort: `${g.away_team.split(' ').pop()} @ ${g.home_team.split(' ').pop()}`,
-          market: m.key, marketLabel: m.key === 'h2h' ? 'ML' : m.key === 'spreads' ? 'Spread' : m.key === 'totals' ? 'Total' : m.key.replace(/_/g, ' '),
-          outcome: o.name, point: o.point,
-          bookDecimal: o.price, fairProb: f.fairProb, fairDecimal: f.fairDecimal,
-          sharpBook: sharpName, edge: (o.price / f.fairDecimal) - 1,
-          devigMethod: m.key === 'h2h' && sharpOutcomes.length === 2 ? 'Shin' : 'Multiplicative',
-        });
+      if (isProp) {
+        // Group sharp outcomes by player (description) + point
+        const playerGroups = new Map();
+        for (const so of sharpOutcomes) {
+          const pk = (so.description || '') + '|' + (so.point ?? '');
+          if (!playerGroups.has(pk)) playerGroups.set(pk, []);
+          playerGroups.get(pk).push(so);
+        }
+        // Group book outcomes similarly
+        for (const o of m.outcomes) {
+          const pk = (o.description || '') + '|' + (o.point ?? '');
+          const sharpPair = playerGroups.get(pk);
+          if (!sharpPair || sharpPair.length < 2) continue;
+          const fair = removeVig(sharpPair, m.key);
+          const f = fair.find(fi => fi.name === o.name);
+          if (!f) continue;
+          const playerName = o.description || o.name;
+          out.push({
+            gameId: g.id, game: `${g.away_team} @ ${g.home_team}`,
+            gameShort: `${g.away_team.split(' ').pop()} @ ${g.home_team.split(' ').pop()}`,
+            market: m.key, marketLabel: getMarketLabel(m.key), isProp: true,
+            outcome: playerName + ' ' + o.name + (o.point != null ? '' : ''), point: o.point,
+            bookDecimal: o.price, fairProb: f.fairProb, fairDecimal: f.fairDecimal,
+            sharpBook: sharpName, edge: (o.price / f.fairDecimal) - 1,
+            devigMethod: 'Multiplicative', playerName,
+          });
+        }
+      } else {
+        const fair = removeVig(sharpOutcomes, m.key);
+        for (const o of m.outcomes) {
+          const f = fair.find(fi => fi.name === o.name && (fi.point === o.point || (!fi.point && !o.point)));
+          if (!f) continue;
+          out.push({
+            gameId: g.id, game: `${g.away_team} @ ${g.home_team}`,
+            gameShort: `${g.away_team.split(' ').pop()} @ ${g.home_team.split(' ').pop()}`,
+            market: m.key, marketLabel: getMarketLabel(m.key), isProp: false,
+            outcome: o.name, point: o.point,
+            bookDecimal: o.price, fairProb: f.fairProb, fairDecimal: f.fairDecimal,
+            sharpBook: sharpName, edge: (o.price / f.fairDecimal) - 1,
+            devigMethod: m.key === 'h2h' && sharpOutcomes.length === 2 ? 'Shin' : 'Multiplicative',
+          });
+        }
       }
     }
   }
@@ -374,22 +432,65 @@ function findBestParlays({ allOutcomes, numLegs, boostPct, maxBet, parlayMode = 
 
 function analyzeGame({ game, bookKey, bonusType, boostPct, maxBet }) {
   const tb = game.bookmakers?.find(b => b.key === bookKey);
-  const sharp = game.bookmakers?.find(b => SHARP.includes(b.key) && b.key !== bookKey);
-  if (!tb || !sharp) return [];
+  // Try multiple sharp sources
+  let sharp = game.bookmakers?.find(b => b.key === 'pinnacle' && b.key !== bookKey);
+  if (!sharp) sharp = game.bookmakers?.find(b => SHARP.includes(b.key) && b.key !== bookKey);
+  if (!tb) return [];
   const results = [];
   for (const m of tb.markets || []) {
-    const sm = sharp.markets?.find(x => x.key === m.key);
-    if (!sm) continue;
-    const fair = removeVig(sm.outcomes);
-    for (const o of m.outcomes) {
-      const f = fair.find(fi => fi.name === o.name && (fi.point === o.point || (!fi.point && !o.point)));
-      if (!f) continue;
-      const r = calcEV({ bonusType, boostPct, maxBet, bookDecimal: o.price, fairProb: f.fairProb });
-      results.push({
-        ...r, market: m.key,
-        marketLabel: m.key === 'h2h' ? 'Moneyline' : m.key === 'spreads' ? 'Spread' : 'Total',
-        outcome: o.name, point: o.point, bookDecimal: o.price,
-        fairProb: f.fairProb, fairDecimal: f.fairDecimal, sharpBook: sharp.title,
+    // Find sharp outcomes for this market — try Pinnacle, then other sharps, then consensus
+    let sharpOutcomes = null, sharpTitle = '';
+    if (sharp) {
+      const sm = sharp.markets?.find(x => x.key === m.key);
+      if (sm && sm.outcomes.length >= 2) { sharpOutcomes = sm.outcomes; sharpTitle = sharp.title || 'Pinnacle'; }
+    }
+    if (!sharpOutcomes) {
+      // Consensus fallback for props
+      const consensus = getConsensusOutcomes(game, m.key);
+      if (consensus) { sharpOutcomes = consensus; sharpTitle = 'Consensus'; }
+    }
+    if (!sharpOutcomes) continue;
+
+    const isProp = isPropMkt(m.key);
+
+    if (isProp) {
+      // Devig per-player pair
+      const playerGroups = new Map();
+      for (const so of sharpOutcomes) {
+        const pk = (so.description || '') + '|' + (so.point ?? '');
+        if (!playerGroups.has(pk)) playerGroups.set(pk, []);
+        playerGroups.get(pk).push(so);
+      }
+      for (const o of m.outcomes) {
+        const pk = (o.description || '') + '|' + (o.point ?? '');
+        const sharpPair = playerGroups.get(pk);
+        if (!sharpPair || sharpPair.length < 2) continue;
+        const fair = removeVig(sharpPair, m.key);
+        const f = fair.find(fi => fi.name === o.name);
+        if (!f) continue;
+        const playerName = o.description || o.name;
+        const r = calcEV({ bonusType, boostPct, maxBet, bookDecimal: o.price, fairProb: f.fairProb });
+        results.push({
+          ...r, market: m.key,
+          marketLabel: getMarketLabel(m.key), isProp: true,
+          outcome: playerName + ' ' + o.name, point: o.point, bookDecimal: o.price,
+          fairProb: f.fairProb, fairDecimal: f.fairDecimal, sharpBook: sharpTitle,
+          gameShort: game.away_team.split(' ').pop() + ' @ ' + game.home_team.split(' ').pop(),
+          playerName, devigMethod: 'Multiplicative',
+        });
+      }
+    } else {
+      const fair = removeVig(sharpOutcomes, m.key);
+      for (const o of m.outcomes) {
+        const f = fair.find(fi => fi.name === o.name && (fi.point === o.point || (!fi.point && !o.point)));
+        if (!f) continue;
+        const r = calcEV({ bonusType, boostPct, maxBet, bookDecimal: o.price, fairProb: f.fairProb });
+        results.push({
+          ...r, market: m.key,
+          marketLabel: getMarketLabel(m.key), isProp: false,
+          outcome: o.name, point: o.point, bookDecimal: o.price,
+          fairProb: f.fairProb, fairDecimal: f.fairDecimal, sharpBook: sharpTitle,
+          gameShort: game.away_team.split(' ').pop() + ' @ ' + game.home_team.split(' ').pop(),
       });
     }
   }
