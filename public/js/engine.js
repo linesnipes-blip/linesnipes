@@ -75,9 +75,69 @@ const PRIO_SPORTS = [
 // ─── MATH ───
 function impliedProb(d) { return 1 / d; }
 
-function removeVig(outcomes) {
+// Multiplicative devig — splits vig evenly
+function devigMultiplicative(outcomes) {
   const t = outcomes.reduce((s, o) => s + impliedProb(o.price), 0);
   return outcomes.map(o => ({ ...o, fairProb: impliedProb(o.price) / t, fairDecimal: t / impliedProb(o.price) }));
+}
+
+// Shin devig — redistributes vig non-linearly (more accurate for heavy favorites)
+function devigShin(outcomes) {
+  if (outcomes.length !== 2) return devigMultiplicative(outcomes); // fallback for 3-way
+  const pA = impliedProb(outcomes[0].price);
+  const pB = impliedProb(outcomes[1].price);
+  const S = pA + pB; // sum of implied probs (overround)
+  // Solve for z (the shin parameter)
+  const z = (S - 1) / (S - Math.sqrt(S * (pA * pA + pB * pB)));
+  // Fair probs using Shin formula
+  const fairA = (Math.sqrt(z * z + 4 * (1 - z) * pA * pA / S) - z) / (2 * (1 - z));
+  const fairB = 1 - fairA;
+  return [
+    { ...outcomes[0], fairProb: fairA, fairDecimal: 1 / fairA },
+    { ...outcomes[1], fairProb: fairB, fairDecimal: 1 / fairB },
+  ];
+}
+
+// Auto devig — picks method based on market type and odds
+function removeVig(outcomes, marketKey) {
+  // Use Shin for h2h (moneylines) when any side is -150 or shorter
+  if (marketKey === 'h2h' && outcomes.length === 2) {
+    const hasHeavyFav = outcomes.some(o => {
+      const am = o.price >= 2 ? (o.price - 1) * 100 : -100 / (o.price - 1);
+      return am <= -150;
+    });
+    if (hasHeavyFav) return devigShin(outcomes);
+  }
+  // Multiplicative for spreads, totals, props, and lighter moneylines
+  return devigMultiplicative(outcomes);
+}
+
+// Consensus sharp odds — average DK + FanDuel + BetMGM decimal odds
+const CONSENSUS_BOOKS = ['draftkings', 'fanduel', 'betmgm'];
+// Sports where Pinnacle props are thin — skip Pinnacle, use consensus
+const SKIP_PINNACLE_SPORTS = ['basketball_nba', 'icehockey_nhl', 'basketball_ncaab'];
+
+function getConsensusOutcomes(game, marketKey) {
+  const allOutcomes = new Map(); // name+point -> [prices]
+  let count = 0;
+  for (const bk of game.bookmakers || []) {
+    if (!CONSENSUS_BOOKS.includes(bk.key)) continue;
+    const mkt = bk.markets?.find(m => m.key === marketKey);
+    if (!mkt) continue;
+    count++;
+    for (const o of mkt.outcomes) {
+      const key = o.name + '|' + (o.point ?? '');
+      if (!allOutcomes.has(key)) allOutcomes.set(key, { name: o.name, point: o.point, prices: [] });
+      allOutcomes.get(key).prices.push(o.price);
+    }
+  }
+  if (count < 2) return null; // need at least 2 books for consensus
+  const result = [];
+  for (const [, v] of allOutcomes) {
+    const avg = v.prices.reduce((s, p) => s + p, 0) / v.prices.length;
+    result.push({ name: v.name, point: v.point, price: avg });
+  }
+  return result.length >= 2 ? result : null;
 }
 
 function amOdds(d) {
@@ -149,24 +209,76 @@ function calcEV({ bonusType, boostPct, maxBet, bookDecimal, fairProb }) {
 
 function extractAllOutcomes(games, bookKey) {
   const out = [];
+  const sportKey = S.sport || '';
+  const skipPinnacle = SKIP_PINNACLE_SPORTS.some(s => sportKey.startsWith(s));
+
   for (const g of games) {
     const tb = g.bookmakers?.find(b => b.key === bookKey);
-    const sharp = g.bookmakers?.find(b => SHARP.includes(b.key) && b.key !== bookKey);
-    if (!tb || !sharp) continue;
+    if (!tb) continue;
+
     for (const m of tb.markets || []) {
-      const sm = sharp.markets?.find(x => x.key === m.key);
-      if (!sm) continue;
-      const fair = removeVig(sm.outcomes);
+      let sharpOutcomes = null;
+      let sharpName = '';
+      const isProps = m.key !== 'h2h' && m.key !== 'spreads' && m.key !== 'totals';
+
+      // For props on NBA/NHL/NCAAB, skip Pinnacle and go straight to consensus
+      if (skipPinnacle && isProps) {
+        const consensus = getConsensusOutcomes(g, m.key);
+        if (consensus) {
+          sharpOutcomes = consensus;
+          sharpName = 'Consensus (DK/FD/MGM)';
+        }
+      }
+
+      // If we don't have consensus, try Pinnacle first
+      if (!sharpOutcomes) {
+        const sharp = g.bookmakers?.find(b => b.key === 'pinnacle');
+        const sm = sharp?.markets?.find(x => x.key === m.key);
+        if (sm && sm.outcomes.length >= 2) {
+          sharpOutcomes = sm.outcomes;
+          sharpName = sharp.title || 'Pinnacle';
+        }
+      }
+
+      // If still no sharp, try other sharp books
+      if (!sharpOutcomes) {
+        for (const sk of SHARP) {
+          if (sk === 'pinnacle' || sk === bookKey) continue;
+          const sb = g.bookmakers?.find(b => b.key === sk);
+          const sm = sb?.markets?.find(x => x.key === m.key);
+          if (sm && sm.outcomes.length >= 2) {
+            sharpOutcomes = sm.outcomes;
+            sharpName = sb.title || sk;
+            break;
+          }
+        }
+      }
+
+      // Last resort: consensus fallback for all markets
+      if (!sharpOutcomes) {
+        const consensus = getConsensusOutcomes(g, m.key);
+        if (consensus) {
+          sharpOutcomes = consensus;
+          sharpName = 'Consensus (DK/FD/MGM)';
+        }
+      }
+
+      if (!sharpOutcomes) continue;
+
+      // Devig with market-aware method
+      const fair = removeVig(sharpOutcomes, m.key);
+
       for (const o of m.outcomes) {
         const f = fair.find(fi => fi.name === o.name && (fi.point === o.point || (!fi.point && !o.point)));
         if (!f) continue;
         out.push({
           gameId: g.id, game: `${g.away_team} @ ${g.home_team}`,
           gameShort: `${g.away_team.split(' ').pop()} @ ${g.home_team.split(' ').pop()}`,
-          market: m.key, marketLabel: m.key === 'h2h' ? 'ML' : m.key === 'spreads' ? 'Spread' : 'Total',
+          market: m.key, marketLabel: m.key === 'h2h' ? 'ML' : m.key === 'spreads' ? 'Spread' : m.key === 'totals' ? 'Total' : m.key.replace(/_/g, ' '),
           outcome: o.name, point: o.point,
           bookDecimal: o.price, fairProb: f.fairProb, fairDecimal: f.fairDecimal,
-          sharpBook: sharp.title, edge: (o.price / f.fairDecimal) - 1,
+          sharpBook: sharpName, edge: (o.price / f.fairDecimal) - 1,
+          devigMethod: m.key === 'h2h' && sharpOutcomes.length === 2 && sharpOutcomes.some(so => { const am = so.price >= 2 ? (so.price-1)*100 : -100/(so.price-1); return am <= -150; }) ? 'Shin' : 'Multiplicative',
         });
       }
     }

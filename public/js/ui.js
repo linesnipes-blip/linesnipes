@@ -268,7 +268,7 @@ function gameCards() {
           active && gr ? h('div', { style: { padding: '0 12px 12px', animation: 'fadeIn .25s' } },
             h('div', { style: { borderTop: '1px solid rgba(155,201,242,.1)', paddingTop: '10px', marginTop: '2px' } },
               h('div', { style: { fontSize: '10.5px', color: 'var(--fg3)', marginBottom: '8px' } },
-                'Sharp: ' + (gr[0]?.sharpBook || 'Pinnacle') + ' · ' + gr.filter(r => r.evPct > 0).length + ' +EV bets'),
+                'Sharp: ' + (gr[0]?.sharpBook || 'Pinnacle') + ' · Devig: ' + (gr[0]?.devigMethod || 'Mult') + ' · ' + gr.filter(r => r.evPct > 0).length + ' +EV bets'),
               !gr.length ? h('div', { style: { textAlign: 'center', padding: '12px', color: 'var(--fg3)', fontSize: '12px' } }, 'No matching markets.')
               : h('div', { style: { display: 'grid', gap: '5px' } },
                 ...gr.map((r, idx) => {
