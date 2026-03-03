@@ -12,7 +12,7 @@ function h(tag, a, ...ch) {
     else if (k === 'disabled') { if (v) el.setAttribute('disabled', ''); }
     else el.setAttribute(k, v);
   }
-  for (const c of ch.flat()) {
+  for (const c of ch.flat(Infinity)) {
     if (c == null || c === false) continue;
     el.appendChild(typeof c === 'string' ? document.createTextNode(c) : c);
   }
