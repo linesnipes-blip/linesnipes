@@ -66,9 +66,10 @@ const BOOKS = [
 const SHARP = ['pinnacle', 'betonlineag', 'bovada', 'betfair_ex_eu'];
 
 const PRIO_SPORTS = [
-  'americanfootball_nfl', 'americanfootball_ncaaf',
-  'basketball_nba', 'basketball_ncaab', 'basketball_wnba',
-  'baseball_mlb', 'icehockey_nhl', 'mma_mixed_martial_arts',
+  'americanfootball_ncaaf',
+  'basketball_nba', 'basketball_ncaab',
+  'icehockey_nhl', 'mma_mixed_martial_arts',
+  'baseball_mlb', 'boxing_boxing',
 ];
 
 // ─── MATH ───
