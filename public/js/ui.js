@@ -401,13 +401,13 @@ function pgSettings() {
       // Promo code section
       h('div', { cls: 'scard' },
         h('h3', {}, 'Promo Code'),
-        h('p', { cls: 'desc' }, p.promo ? '✅ Active: ' + (p.promoLabel || p.promo) : 'Have a promo code? Enter it below.'),
-        !p.promo ? h('div', { style: { display: 'flex', gap: '8px' } },
+        h('p', { cls: 'desc' }, (plan === 'unlimited' || plan === 'lifetime') ? '✅ Active: ' + plan.charAt(0).toUpperCase() + plan.slice(1) + ' access' : 'Have a promo code? Enter it below.'),
+        (plan !== 'unlimited' && plan !== 'lifetime') ? h('div', { style: { display: 'flex', gap: '8px' } },
           h('input', { type: 'text', placeholder: 'Enter code', id: 'inp-promo', style: { flex: '1', textTransform: 'uppercase' } }),
-          h('button', { cls: 'mbtn', style: { borderColor: 'var(--accent)', color: 'var(--accent)', whiteSpace: 'nowrap' }, onClick: () => {
+          h('button', { cls: 'mbtn', style: { borderColor: 'var(--accent)', color: 'var(--accent)', whiteSpace: 'nowrap' }, onClick: async () => {
             const code = document.getElementById('inp-promo')?.value;
-            const err = applyPromo(code);
             const errEl = document.getElementById('promo-err');
+            const err = await applyPromo(code);
             if (err && errEl) errEl.textContent = err;
           } }, 'Apply'),
         ) : null,

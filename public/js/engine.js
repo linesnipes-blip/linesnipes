@@ -16,29 +16,16 @@ try {
 } catch (e) { console.warn('Supabase not configured yet'); }
 
 // ─── PROMO CODES ───
-const PROMO_CODES = {
-  'LINESNIPES2026': { plan: 'unlimited', label: 'Unlimited Access' },
-  'BETATESTER': { plan: 'unlimited', label: 'Beta Tester - Unlimited' },
-  'FOUNDER': { plan: 'lifetime', label: 'Founder - Lifetime' },
-};
-
-function applyPromo(code) {
+async function applyPromo(code) {
   const c = (code || '').trim().toUpperCase();
-  const promo = PROMO_CODES[c];
-  if (!promo) return 'Invalid promo code.';
-  // Store locally so it persists across sessions
-  localStorage.setItem('ls_promo', c);
-  S.profile = { ...S.profile, plan: promo.plan, fetches_used: 0, promo: c, promoLabel: promo.label };
-  set({ profile: S.profile });
-  return null;
-}
-
-function checkStoredPromo() {
-  const c = localStorage.getItem('ls_promo');
-  if (c && PROMO_CODES[c]) {
-    const promo = PROMO_CODES[c];
-    S.profile = { ...S.profile, plan: promo.plan, fetches_used: 0, promo: c, promoLabel: promo.label };
-  }
+  if (!c) return 'Please enter a code.';
+  try {
+    const data = await apiFetch('promo', { method: 'POST', body: JSON.stringify({ code: c }) });
+    if (data.error) return data.error;
+    // Reload profile from server
+    await loadProfile();
+    return null;
+  } catch (e) { return 'Failed to apply promo.'; }
 }
 
 // ─── STATE ───
@@ -384,5 +371,5 @@ async function doLogin(email, pw) {
 async function initAuth() {
   if (!sb) return;
   const { data } = await sb.auth.getSession();
-  if (data?.session?.user) { set({ user: data.session.user, page: 'app' }); await loadProfile(); checkStoredPromo(); fetchSports(); }
+  if (data?.session?.user) { set({ user: data.session.user, page: 'app' }); await loadProfile(); fetchSports(); }
 }
