@@ -491,7 +491,8 @@ function analyzeGame({ game, bookKey, bonusType, boostPct, maxBet }) {
           outcome: o.name, point: o.point, bookDecimal: o.price,
           fairProb: f.fairProb, fairDecimal: f.fairDecimal, sharpBook: sharpTitle,
           gameShort: game.away_team.split(' ').pop() + ' @ ' + game.home_team.split(' ').pop(),
-      });
+        });
+      }
     }
   }
   return results.sort((a, b) => b.evPct - a.evPct);
