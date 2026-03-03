@@ -217,7 +217,7 @@ function parlayResults() {
               h('div', {},
                 h('div', { style: { display: 'flex', flexWrap: 'wrap', gap: '4px', marginBottom: '4px' } },
                   ...p.legs.map((l, i) => h('span', { style: { fontSize: '10px', background: 'rgba(155,201,242,.08)', color: 'var(--accent)', padding: '2px 8px', borderRadius: '4px', fontFamily: 'var(--mono)' } },
-                    (i + 1) + '. ' + l.outcome + (l.point != null ? ' (' + (l.point > 0 ? '+' : '') + l.point + ')' : '')))),
+                    (i + 1) + '. ' + l.outcome + (l.point != null ? ' (' + (l.point > 0 ? '+' : '') + l.point + ')' : '') + ' ' + l.marketLabel + ' ' + amOdds(l.bookDecimal)))),
                 h('div', { style: { fontSize: '10px', color: 'var(--fg3)' } },
                   p.uniqueGames + ' game' + (p.uniqueGames > 1 ? 's' : '') + ' · ' + amOdds(p.parlayDecimal) + ' parlay')),
               h('div', { style: { textAlign: 'right', marginLeft: '12px' } },
