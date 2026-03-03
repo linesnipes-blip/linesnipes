@@ -101,15 +101,11 @@ function devigShin(outcomes) {
 
 // Auto devig — picks method based on market type and odds
 function removeVig(outcomes, marketKey) {
-  // Use Shin for h2h (moneylines) when any side is -150 or shorter
+  // Use Shin for all h2h (moneylines) with 2 outcomes — more accurate across the board
   if (marketKey === 'h2h' && outcomes.length === 2) {
-    const hasHeavyFav = outcomes.some(o => {
-      const am = o.price >= 2 ? (o.price - 1) * 100 : -100 / (o.price - 1);
-      return am <= -150;
-    });
-    if (hasHeavyFav) return devigShin(outcomes);
+    return devigShin(outcomes);
   }
-  // Multiplicative for spreads, totals, props, and lighter moneylines
+  // Multiplicative for spreads, totals, props
   return devigMultiplicative(outcomes);
 }
 
@@ -162,14 +158,12 @@ function passFilter(dec, minS, maxS) {
 
 function calcEV({ bonusType, boostPct, maxBet, bookDecimal, fairProb }) {
   const stake = maxBet;
-  const fairDecimal = 1 / fairProb;
-  const edge = (bookDecimal / fairDecimal - 1) * 100;
   if (bonusType === 'profit_boost') {
     const np = (bookDecimal - 1) * stake;
     const bp = np * (1 + boostPct / 100);
     const bpay = stake + bp;
     const ev = fairProb * bpay - stake;
-    const evPct = edge;
+    const evPct = (ev / stake) * 100;
     return { ev, evPct, stake, math: [
       `Fair probability: ${(fairProb*100).toFixed(2)}%`,
       `Book odds: ${amOdds(bookDecimal)} (${bookDecimal.toFixed(3)})`,
@@ -184,7 +178,7 @@ function calcEV({ bonusType, boostPct, maxBet, bookDecimal, fairProb }) {
     const profit = (bookDecimal - 1) * stake;
     const fbv = stake * 0.7;
     const ev = fairProb * profit + (1 - fairProb) * fbv;
-    const evPct = edge;
+    const evPct = (ev / stake) * 100;
     return { ev, evPct, stake, math: [
       `Fair probability: ${(fairProb*100).toFixed(2)}%`,
       `Book odds: ${amOdds(bookDecimal)} (${bookDecimal.toFixed(3)})`,
@@ -198,7 +192,7 @@ function calcEV({ bonusType, boostPct, maxBet, bookDecimal, fairProb }) {
     const bd = bookDecimal * (1 + boostPct / 100);
     const payout = bd * stake;
     const ev = fairProb * payout - stake;
-    const evPct = edge;
+    const evPct = (ev / stake) * 100;
     return { ev, evPct, stake, math: [
       `Fair probability: ${(fairProb*100).toFixed(2)}%`,
       `Original: ${amOdds(bookDecimal)} → Boosted: ${amOdds(bd)} (${bd.toFixed(3)})`,
@@ -281,7 +275,7 @@ function extractAllOutcomes(games, bookKey) {
           outcome: o.name, point: o.point,
           bookDecimal: o.price, fairProb: f.fairProb, fairDecimal: f.fairDecimal,
           sharpBook: sharpName, edge: (o.price / f.fairDecimal) - 1,
-          devigMethod: m.key === 'h2h' && sharpOutcomes.length === 2 && sharpOutcomes.some(so => { const am = so.price >= 2 ? (so.price-1)*100 : -100/(so.price-1); return am <= -150; }) ? 'Shin' : 'Multiplicative',
+          devigMethod: m.key === 'h2h' && sharpOutcomes.length === 2 ? 'Shin' : 'Multiplicative',
         });
       }
     }
