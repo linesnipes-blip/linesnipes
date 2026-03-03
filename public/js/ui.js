@@ -23,7 +23,7 @@ function h(tag, a, ...ch) {
 function pgLanding() {
   return h('div', {},
     h('nav', { cls: 'nav' }, h('div', { cls: 'nav-inner' },
-      h('div', { cls: 'nav-logo', onClick: () => set({ page: 'landing' }) }, h('div', { cls: 'crosshair' }, '🎯'), 'LineSnipes'),
+      h('div', { cls: 'nav-logo', onClick: () => set({ page: 'landing' }) }, h('img', { src: '/line_snipes_logo.png', alt: 'LineSnipes', style: { height: '32px' } })),
       h('div', { cls: 'nav-links' },
         h('button', { cls: 'nbtn nbtn-g', onClick: () => set({ page: 'pricing' }) }, 'Pricing'),
         h('button', { cls: 'nbtn nbtn-g', onClick: () => set({ page: 'faq' }) }, 'FAQ'),
@@ -34,12 +34,12 @@ function pgLanding() {
     h('section', { cls: 'hero container' },
       h('div', { cls: 'htag fade-up' }, '🎯 Sharp Line Analysis'),
       h('h1', { cls: 'fade-up d1', html: '<em>Snipe +EV Bets</em><br>Before They Disappear' }),
-      h('p', { cls: 'fade-up d2' }, 'Instantly find positive expected value in every boost, promo, and parlay. Powered by sharp lines from Pinnacle. Zero guesswork.'),
+      h('p', { cls: 'fade-up d2' }, 'Instantly find positive expected value in every boost, promo, and parlay. Powered by Pinnacle sharp lines and our proprietary composite model. Zero guesswork.'),
       h('button', { cls: 'hcta fade-up d3', onClick: () => set({ page: 'signup' }) }, '🎯 Start Sniping — Free'),
       h('div', { cls: 'fade-up d4', style: { marginTop: '16px', fontSize: '13px', color: 'var(--fg3)' } }, '10 free searches. No credit card required.'),
     ),
     h('section', { cls: 'fgrid container' },
-      ...[ ['🔬','Sharp Line Devigging','Strip the vig from Pinnacle to calculate true fair probabilities for every outcome.'],
+      ...[ ['🔬','Sharp Line Devigging','Pinnacle lines + our proprietary composite model deliver true fair probabilities for every outcome.'],
         ['🚀','Boost Analyzer','Profit boosts, risk-free bets, odds boosts — see the exact +EV percentage instantly.'],
         ['🔗','Parlay Optimizer','Standard, SGP, and SGP+ modes find the highest-EV leg combinations for your boost.'],
         ['📊','Full Math Breakdown','Step-by-step calculations. Fair probability, vig removal, boost application, final EV.'],
@@ -95,7 +95,7 @@ function pgAuth(mode) {
   const box = h('div', { cls: 'auth-wrap' }, h('div', { cls: 'auth-box' },
     h('div', { style: { textAlign: 'center', marginBottom: '24px' } },
       h('div', { style: { display: 'inline-flex', alignItems: 'center', gap: '8px', fontFamily: 'var(--display)', fontSize: '24px', fontWeight: '800', color: '#fff' } },
-        h('span', { style: { fontSize: '28px' } }, '🎯'), 'LineSnipes')),
+        h('img', { src: '/line_snipes_logo.png', alt: 'LineSnipes', style: { height: '36px' } }))),
     h('h2', {}, isLogin ? 'Welcome back' : 'Create your account'),
     h('p', { cls: 'sub' }, isLogin ? 'Log in to start sniping.' : '10 free searches. No credit card.'),
     h('label', {}, 'Email'), h('input', { type: 'email', placeholder: 'you@email.com', id: 'ae' }),
@@ -128,7 +128,7 @@ function appHeader() {
   const pct = limit ? Math.min((used / limit) * 100, 100) : 0;
   const bc = pct > 90 ? 'danger' : pct > 70 ? 'warn' : '';
   return h('div', { cls: 'app-hdr' }, h('div', { cls: 'app-hdr-in' },
-    h('div', { cls: 'app-logo' }, h('div', { cls: 'app-icon' }, '🎯'), 'LineSnipes'),
+    h('div', { cls: 'app-logo' }, h('img', { src: '/line_snipes_logo.png', alt: 'LineSnipes', style: { height: '28px' } })),
     h('div', { style: { display: 'flex', alignItems: 'center', gap: '12px' } },
       limit ?
         h('div', { cls: 'ubadge' }, h('span', {}, used + '/' + limit), h('div', { cls: 'ubar' }, h('div', { cls: 'ufill ' + bc, style: { width: pct + '%' } })))
@@ -521,7 +521,7 @@ function pgFaq() {
       items: [
         {
           q: 'What does LineSnipes do?',
-          a: 'LineSnipes finds positive expected value (+EV) bets by comparing the odds at your sportsbook against sharp betting lines from Pinnacle and other sharp sources. When your sportsbook offers better odds than the true fair probability suggests, that\'s a +EV bet — and we find them for you instantly.'
+          a: 'LineSnipes finds positive expected value (+EV) bets by comparing the odds at your sportsbook against true fair probabilities derived from sharp lines. We use Pinnacle as our primary sharp source, and when Pinnacle lines aren\'t available, we use our proprietary market composite model to calculate fair odds. When your sportsbook offers better odds than fair value, that\'s a +EV bet — and we find them for you instantly.'
         },
         {
           q: 'What is Expected Value (EV)?',
@@ -529,7 +529,7 @@ function pgFaq() {
         },
         {
           q: 'What is "devigging" or "vig removal"?',
-          a: 'Sportsbooks build a margin (the "vig" or "juice") into their odds so they profit regardless of the outcome. Devigging strips that margin away to reveal the true fair probability. LineSnipes uses Pinnacle\'s odds as the sharp baseline and removes their vig to get fair probabilities, then compares those against your book\'s odds.'
+          a: 'Sportsbooks build a margin (the "vig" or "juice") into their odds so they profit regardless of the outcome. Devigging strips that margin away to reveal the true fair probability. LineSnipes uses Pinnacle\'s odds as the primary sharp baseline, and when those aren\'t available, our proprietary sharp composite algorithm synthesizes lines from multiple sources to generate accurate fair probabilities.'
         },
       ]
     },
@@ -546,7 +546,7 @@ function pgFaq() {
         },
         {
           q: 'Why do you use Pinnacle as the sharp line?',
-          a: 'Pinnacle accepts the highest limits in the world and doesn\'t ban winning bettors. This means their lines are shaped by the sharpest money in the market. When Pinnacle isn\'t available (common for NBA/NHL/NCAAB props), we fall back to a consensus average of DraftKings, FanDuel, and BetMGM.'
+          a: 'Pinnacle accepts the highest limits in the world and doesn\'t ban winning bettors. This means their lines are shaped by the sharpest money in the market. When Pinnacle lines aren\'t available (common for NBA/NHL/NCAAB props), LineSnipes switches to our proprietary sharp composite — a weighted model that synthesizes odds across the sharpest available books to derive fair probabilities that rival Pinnacle-level accuracy.'
         },
         {
           q: 'What\'s the difference between Multiplicative and Shin devigging?',
@@ -588,7 +588,7 @@ function pgFaq() {
         },
         {
           q: 'Why do some games show "No sharp lines"?',
-          a: 'This means Pinnacle (or our consensus sources) don\'t have odds for that game yet. This is common for games far in the future or niche markets. Check back closer to game time.'
+          a: 'This means neither Pinnacle nor our sharp composite model have enough data for that game yet. This is common for games far in the future or niche markets. Check back closer to game time — lines typically become available as the event approaches.'
         },
         {
           q: 'Can I lose money on +EV bets?',
@@ -649,7 +649,7 @@ function pgFaq() {
 function pgPricing() {
   return h('div', {},
     h('nav', { cls: 'nav' }, h('div', { cls: 'nav-inner' },
-      h('div', { cls: 'nav-logo', onClick: () => set({ page: S.user ? 'app' : 'landing' }) }, h('div', { cls: 'crosshair' }, '🎯'), 'LineSnipes'),
+      h('div', { cls: 'nav-logo', onClick: () => set({ page: S.user ? 'app' : 'landing' }) }, h('img', { src: '/line_snipes_logo.png', alt: 'LineSnipes', style: { height: '32px' } })),
       h('div', { cls: 'nav-links' },
         S.user ? h('button', { cls: 'nbtn nbtn-g', onClick: () => set({ page: 'app' }) }, '← Back to Tool')
           : h('button', { cls: 'nbtn nbtn-p', onClick: () => set({ page: 'signup' }) }, 'Get Started')),
