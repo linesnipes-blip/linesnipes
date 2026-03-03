@@ -3,12 +3,17 @@
 // ═══════════════════════════════════════════════════
 
 const CONFIG = {
-  SUPABASE_URL: 'YOUR_SUPABASE_URL',
-  SUPABASE_ANON_KEY: 'YOUR_SUPABASE_ANON_KEY',
+  SUPABASE_URL: 'https://ayriinlzirgyktawgfhc.supabase.co',
+  SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF5cmlpbmx6aXJneWt0YXdnZmhjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI0OTM5MzUsImV4cCI6MjA4ODA2OTkzNX0.Iz_uLYRJxOwaT0W5aWf8CdSn5gEARxkYh-E1yYFDu5g',
   API_BASE: '/api',
 };
 
-const sb = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
+let sb = null;
+try {
+  if (CONFIG.SUPABASE_URL && CONFIG.SUPABASE_ANON_KEY) {
+    sb = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
+  }
+} catch (e) { console.warn('Supabase not configured yet'); }
 
 // ─── STATE ───
 const S = {
@@ -266,6 +271,7 @@ function analyzeGame({ game, bookKey, bonusType, boostPct, maxBet }) {
 
 // ─── API HELPERS ───
 async function getToken() {
+  if (!sb) return null;
   const { data } = await sb.auth.getSession();
   return data?.session?.access_token || null;
 }
@@ -329,11 +335,12 @@ async function openPortal() {
 }
 
 async function doLogout() {
-  await sb.auth.signOut();
+  if (sb) await sb.auth.signOut();
   set({ user: null, profile: null, page: 'landing' });
 }
 
 async function doSignup(email, pw) {
+  if (!sb) return 'Supabase not configured yet. Coming soon!';
   const { data, error } = await sb.auth.signUp({ email, password: pw });
   if (error) return error.message;
   if (data.user) { set({ user: data.user, page: 'app' }); await loadProfile(); fetchSports(); }
@@ -341,6 +348,7 @@ async function doSignup(email, pw) {
 }
 
 async function doLogin(email, pw) {
+  if (!sb) return 'Supabase not configured yet. Coming soon!';
   const { data, error } = await sb.auth.signInWithPassword({ email, password: pw });
   if (error) return error.message;
   if (data.user) { set({ user: data.user, page: 'app' }); await loadProfile(); fetchSports(); }
@@ -348,6 +356,7 @@ async function doLogin(email, pw) {
 }
 
 async function initAuth() {
+  if (!sb) return;
   const { data } = await sb.auth.getSession();
   if (data?.session?.user) { set({ user: data.session.user, page: 'app' }); await loadProfile(); fetchSports(); }
 }

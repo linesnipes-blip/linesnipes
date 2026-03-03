@@ -19,6 +19,6 @@ function render() {
   window.scrollTo(0, 0);
 }
 
-// Init
-initAuth().then(() => render());
+// Render landing page immediately, then check auth in background
 render();
+initAuth();
