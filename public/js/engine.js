@@ -37,7 +37,7 @@ const S = {
   numLegs: '3', parlayMode: 'standard',
   minOdds: '', maxOdds: '', sportsbook: 'draftkings',
   selectedGame: null, singleResults: null, parlayResults: null,
-  expandedIdx: null, expandedMath: null, expandedGroups: {},
+  expandedIdx: null, expandedMath: null, expandedGroups: {}, excludedTeams: new Set(),
   _faqOpen: null,
 };
 
@@ -565,7 +565,7 @@ async function fetchOdds() {
     if (!odds.length) { set({ error: 'No games found for this sport right now.', loading: false }); return; }
     let parlayResults = null;
     if (S.bonusType === 'parlay_boost') {
-      const ao = extractAllOutcomes(odds, S.sportsbook);
+      const ao = extractAllOutcomes(odds, S.sportsbook).filter(o => !S.excludedTeams.has(o.game));
       parlayResults = findBestParlays({
         allOutcomes: ao, numLegs: parseInt(S.numLegs) || 3,
         boostPct: parseFloat(S.boostPct) || 0, maxBet: parseFloat(S.maxBet) || 50,
@@ -574,6 +574,25 @@ async function fetchOdds() {
     }
     set({ odds, parlayResults, loading: false });
   } catch (err) { set({ error: err.message, loading: false }); }
+}
+
+function rebuildParlays() {
+  if (!S.odds || S.bonusType !== 'parlay_boost') return;
+  const ao = extractAllOutcomes(S.odds, S.sportsbook)
+    .filter(o => !S.excludedTeams.has(o.game));
+  const parlayResults = findBestParlays({
+    allOutcomes: ao, numLegs: parseInt(S.numLegs) || 3,
+    boostPct: parseFloat(S.boostPct) || 0, maxBet: parseFloat(S.maxBet) || 50,
+    parlayMode: S.parlayMode,
+  });
+  set({ parlayResults });
+}
+
+function toggleExcludeTeam(gameName) {
+  const ex = new Set(S.excludedTeams);
+  if (ex.has(gameName)) ex.delete(gameName); else ex.add(gameName);
+  S.excludedTeams = ex;
+  rebuildParlays();
 }
 
 function runSingle(game) {
