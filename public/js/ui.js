@@ -319,7 +319,7 @@ function pgApp() {
         h('span', {}, '✕'), h('span', { style: { flex: '1' } }, S.error),
         h('button', { onClick: () => set({ error: '' }), style: { fontSize: '16px' } }, '×')) : null,
       // Bonus Config
-      h('div', { cls: 'card fade-up' },
+      h('div', { cls: 'card' },
         h('div', { cls: 'stitle' }, h('span', { style: { color: 'var(--accent)' } }, '●'), ' Bonus Configuration'),
         h('div', { cls: 'lbl' }, 'Type'),
         h('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '5px', marginBottom: '14px' } },
@@ -355,7 +355,7 @@ function pgApp() {
             h('span', { style: { fontSize: '10px', fontWeight: '700' } }, b.label)))),
       ),
       // Sport & Fetch
-      h('div', { cls: 'card fade-up' },
+      h('div', { cls: 'card' },
         h('div', { cls: 'stitle' }, h('span', { style: { color: 'var(--accent)' } }, '●'), ' Sport & Odds'),
         sportPicker(),
         h('div', { style: { marginTop: '16px' } },
