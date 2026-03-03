@@ -398,6 +398,21 @@ function pgSettings() {
       h('div', { cls: 'scard' },
         h('h3', {}, 'Account'), h('p', { cls: 'desc' }, p.email || S.user?.email || ''),
         h('button', { cls: 'lobtn', onClick: doLogout }, 'Log Out')),
+      // Promo code section
+      h('div', { cls: 'scard' },
+        h('h3', {}, 'Promo Code'),
+        h('p', { cls: 'desc' }, p.promo ? '✅ Active: ' + (p.promoLabel || p.promo) : 'Have a promo code? Enter it below.'),
+        !p.promo ? h('div', { style: { display: 'flex', gap: '8px' } },
+          h('input', { type: 'text', placeholder: 'Enter code', id: 'inp-promo', style: { flex: '1', textTransform: 'uppercase' } }),
+          h('button', { cls: 'mbtn', style: { borderColor: 'var(--accent)', color: 'var(--accent)', whiteSpace: 'nowrap' }, onClick: () => {
+            const code = document.getElementById('inp-promo')?.value;
+            const err = applyPromo(code);
+            const errEl = document.getElementById('promo-err');
+            if (err && errEl) errEl.textContent = err;
+          } }, 'Apply'),
+        ) : null,
+        h('div', { id: 'promo-err', style: { color: 'var(--red)', fontSize: '12px', marginTop: '8px' } }),
+      ),
     ),
   );
 }
