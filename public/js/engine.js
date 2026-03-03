@@ -64,7 +64,7 @@ const BOOKS = [
   { key: 'hardrockbet', label: 'Hard Rock', c: '#c6a04c' },
 ];
 
-const SHARP = ['pinnacle', 'betonlineag', 'bovada', 'betfair_ex_eu'];
+const SHARP = ['pinnacle'];
 
 const PRIO_SPORTS = [
   'americanfootball_ncaaf',
@@ -137,15 +137,20 @@ function removeVig(outcomes, marketKey) {
 }
 
 // Consensus sharp odds — average DK + FanDuel + BetMGM decimal odds
-const CONSENSUS_BOOKS = ['draftkings', 'fanduel', 'betmgm'];
+// Market average uses ALL available books (not just 3)
+const CONSENSUS_BOOKS_CORE = null; // null = use all books for core markets
+const CONSENSUS_BOOKS_PROPS = ['draftkings', 'fanduel', 'betmgm']; // props: top 3 US books
 // Sports where Pinnacle props are thin — skip Pinnacle, use consensus
 const SKIP_PINNACLE_SPORTS = ['basketball_nba', 'icehockey_nhl', 'basketball_ncaab'];
 
-function getConsensusOutcomes(game, marketKey) {
-  const allOutcomes = new Map(); // name+point -> [prices]
+function getConsensusOutcomes(game, marketKey, bookFilter) {
+  const allOutcomes = new Map();
   let count = 0;
   for (const bk of game.bookmakers || []) {
-    if (!CONSENSUS_BOOKS.includes(bk.key)) continue;
+    // Skip Pinnacle (it's the sharp, not part of market avg)
+    if (bk.key === 'pinnacle') continue;
+    // If bookFilter provided, only use those books; otherwise use all
+    if (bookFilter && !bookFilter.includes(bk.key)) continue;
     const mkt = bk.markets?.find(m => m.key === marketKey);
     if (!mkt) continue;
     count++;
@@ -158,12 +163,12 @@ function getConsensusOutcomes(game, marketKey) {
   if (count < 2) return null;
   const result = [];
   for (const [, v] of allOutcomes) {
-    // Use median instead of mean — more robust against outlier books
+    // Use median — robust against outlier books
     const sorted = [...v.prices].sort((a, b) => a - b);
     const mid = Math.floor(sorted.length / 2);
     const median = sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
-    // Skip outcomes where books disagree wildly (max/min ratio > 2x)
-    if (sorted.length >= 2 && sorted[sorted.length - 1] / sorted[0] > 2) continue;
+    // Skip if price is too extreme (< 1.05 for any outcome)
+    if (median < 1.05) continue;
     const out = { name: v.name, point: v.point, price: median };
     if (v.description) out.description = v.description;
     result.push(out);
@@ -275,7 +280,7 @@ function extractAllOutcomes(games, bookKey) {
 
       // For props on NBA/NHL/NCAAB, skip Pinnacle and go straight to consensus
       if (skipPinnacle && isProps) {
-        const consensus = getConsensusOutcomes(g, m.key);
+        const consensus = getConsensusOutcomes(g, m.key, CONSENSUS_BOOKS_PROPS);
         if (consensus) {
           sharpOutcomes = consensus;
           sharpName = 'Consensus (DK/FD/MGM)';
@@ -309,7 +314,7 @@ function extractAllOutcomes(games, bookKey) {
       // Last resort: consensus fallback — ONLY for props, not core h2h/spreads/totals
       // Consensus is unreliable for core markets (especially extreme moneylines)
       if (!sharpOutcomes && isPropMkt(m.key)) {
-        const consensus = getConsensusOutcomes(g, m.key);
+        const consensus = getConsensusOutcomes(g, m.key, CONSENSUS_BOOKS_PROPS);
         if (consensus) {
           sharpOutcomes = consensus;
           sharpName = 'Consensus (DK/FD/MGM)';
@@ -473,10 +478,11 @@ function analyzeGame({ game, bookKey, bonusType, boostPct, maxBet }) {
       const sm = sharp.markets?.find(x => x.key === m.key);
       if (sm && isValidSharp(sm.outcomes, m.key)) { sharpOutcomes = sm.outcomes; sharpTitle = sharp.title || 'Pinnacle'; }
     }
-    if (!sharpOutcomes && isPropMkt(m.key)) {
-      // Consensus fallback — ONLY for props
-      const consensus = getConsensusOutcomes(game, m.key);
-      if (consensus) { sharpOutcomes = consensus; sharpTitle = 'Consensus'; }
+    if (!sharpOutcomes) {
+      // Fallback: market average (all books for core, top 3 for props)
+      const bkFilter = isPropMkt(m.key) ? CONSENSUS_BOOKS_PROPS : null;
+      const consensus = getConsensusOutcomes(game, m.key, bkFilter);
+      if (consensus) { sharpOutcomes = consensus; sharpTitle = bkFilter ? 'Consensus' : 'Market Avg'; }
     }
     if (!sharpOutcomes) continue;
 
