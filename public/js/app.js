@@ -2,6 +2,8 @@
 // LINESNIPES app.js — Router & Init
 // ═══════════════════════════════════════════════════
 
+let _lastPage = null;
+
 function render() {
   const root = document.getElementById('root');
   let page;
@@ -16,7 +18,7 @@ function render() {
   }
   root.innerHTML = '';
   root.appendChild(page);
-  window.scrollTo(0, 0);
+  if (S.page !== _lastPage) { window.scrollTo(0, 0); _lastPage = S.page; }
 }
 
 // Render landing page immediately, then check auth in background
