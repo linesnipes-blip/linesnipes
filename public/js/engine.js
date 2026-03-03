@@ -285,8 +285,9 @@ function extractAllOutcomes(games, bookKey) {
         }
       }
 
-      // Last resort: consensus fallback for all markets
-      if (!sharpOutcomes) {
+      // Last resort: consensus fallback — ONLY for props, not core h2h/spreads/totals
+      // Consensus is unreliable for core markets (especially extreme moneylines)
+      if (!sharpOutcomes && isPropMkt(m.key)) {
         const consensus = getConsensusOutcomes(g, m.key);
         if (consensus) {
           sharpOutcomes = consensus;
@@ -451,8 +452,8 @@ function analyzeGame({ game, bookKey, bonusType, boostPct, maxBet }) {
       const sm = sharp.markets?.find(x => x.key === m.key);
       if (sm && sm.outcomes.length >= 2) { sharpOutcomes = sm.outcomes; sharpTitle = sharp.title || 'Pinnacle'; }
     }
-    if (!sharpOutcomes) {
-      // Consensus fallback for props
+    if (!sharpOutcomes && isPropMkt(m.key)) {
+      // Consensus fallback — ONLY for props
       const consensus = getConsensusOutcomes(game, m.key);
       if (consensus) { sharpOutcomes = consensus; sharpTitle = 'Consensus'; }
     }
