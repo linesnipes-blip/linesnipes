@@ -246,7 +246,22 @@ function gameCards() {
     h('div', { style: { fontSize: '12px', color: 'var(--fg3)', marginBottom: '10px' } },
       games.length + ' games (' + withBook.length + ' with ' + (book?.label || '') + ')'),
     h('div', {},
-      ...games.map(g => {
+      ...(() => {
+        const edgeMap = new Map();
+        if (S.odds) {
+          const all = extractAllOutcomes(S.odds, S.sportsbook);
+          for (const o of all) {
+            if (!edgeMap.has(o.gameId) || o.edge > edgeMap.get(o.gameId)) edgeMap.set(o.gameId, o.edge);
+          }
+        }
+        return [...games].sort((a, b) => {
+          const aHasBook = a.bookmakers?.some(bk => bk.key === S.sportsbook);
+          const bHasBook = b.bookmakers?.some(bk => bk.key === S.sportsbook);
+          if (!aHasBook && bHasBook) return 1;
+          if (aHasBook && !bHasBook) return -1;
+          return (edgeMap.get(b.id) || -999) - (edgeMap.get(a.id) || -999);
+        });
+      })().map(g => {
         const hasBook = g.bookmakers?.some(b => b.key === S.sportsbook);
         const hasSharp = g.bookmakers?.some(b => SHARP.includes(b.key) && b.key !== S.sportsbook);
         const active = S.selectedGame?.id === g.id;
