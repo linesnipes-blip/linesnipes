@@ -158,47 +158,47 @@ function passFilter(dec, minS, maxS) {
 
 function calcEV({ bonusType, boostPct, maxBet, bookDecimal, fairProb }) {
   const stake = maxBet;
+  const fairDecimal = 1 / fairProb;
+  const edge = (bookDecimal / fairDecimal - 1) * 100;
   if (bonusType === 'profit_boost') {
     const np = (bookDecimal - 1) * stake;
     const bp = np * (1 + boostPct / 100);
     const bpay = stake + bp;
     const ev = fairProb * bpay - stake;
-    const evPct = (ev / stake) * 100;
-    return { ev, evPct, stake, math: [
+    return { ev, evPct: edge, stake, math: [
       `Fair probability: ${(fairProb*100).toFixed(2)}%`,
       `Book odds: ${amOdds(bookDecimal)} (${bookDecimal.toFixed(3)})`,
       `Normal profit: (${bookDecimal.toFixed(3)} − 1) × $${stake.toFixed(2)} = $${np.toFixed(2)}`,
       `Boosted profit: $${np.toFixed(2)} × ${(1+boostPct/100).toFixed(2)} = $${bp.toFixed(2)}`,
       `Payout if win: $${stake.toFixed(2)} + $${bp.toFixed(2)} = $${bpay.toFixed(2)}`,
       `EV = ${(fairProb*100).toFixed(2)}% × $${bpay.toFixed(2)} − $${stake.toFixed(2)} = $${ev.toFixed(2)}`,
-      `EV% = ${evPct.toFixed(2)}%`,
+      `EV% = ${edge.toFixed(2)}%`,
     ]};
   }
   if (bonusType === 'risk_free') {
     const profit = (bookDecimal - 1) * stake;
     const fbv = stake * 0.7;
     const ev = fairProb * profit + (1 - fairProb) * fbv;
-    const evPct = (ev / stake) * 100;
-    return { ev, evPct, stake, math: [
+    return { ev, evPct: edge, stake, math: [
       `Fair probability: ${(fairProb*100).toFixed(2)}%`,
       `Book odds: ${amOdds(bookDecimal)} (${bookDecimal.toFixed(3)})`,
       `Profit if win: (${bookDecimal.toFixed(3)} − 1) × $${stake.toFixed(2)} = $${profit.toFixed(2)}`,
       `Free bet value if loss: $${stake.toFixed(2)} × 70% = $${fbv.toFixed(2)}`,
       `EV = ${(fairProb*100).toFixed(2)}% × $${profit.toFixed(2)} + ${((1-fairProb)*100).toFixed(2)}% × $${fbv.toFixed(2)} = $${ev.toFixed(2)}`,
-      `EV% = ${evPct.toFixed(2)}%`,
+      `EV% = ${edge.toFixed(2)}%`,
     ]};
   }
   if (bonusType === 'odds_boost') {
     const bd = bookDecimal * (1 + boostPct / 100);
     const payout = bd * stake;
     const ev = fairProb * payout - stake;
-    const evPct = (ev / stake) * 100;
-    return { ev, evPct, stake, math: [
+
+    return { ev, evPct: edge, stake, math: [
       `Fair probability: ${(fairProb*100).toFixed(2)}%`,
       `Original: ${amOdds(bookDecimal)} → Boosted: ${amOdds(bd)} (${bd.toFixed(3)})`,
       `Payout if win: ${bd.toFixed(3)} × $${stake.toFixed(2)} = $${payout.toFixed(2)}`,
       `EV = ${(fairProb*100).toFixed(2)}% × $${payout.toFixed(2)} − $${stake.toFixed(2)} = $${ev.toFixed(2)}`,
-      `EV% = ${evPct.toFixed(2)}%`,
+      `EV% = ${edge.toFixed(2)}%`,
     ]};
   }
   return { ev: 0, evPct: 0, stake: 0, math: [] };
