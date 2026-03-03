@@ -9,6 +9,7 @@ function h(tag, a, ...ch) {
     else if (k.startsWith('on')) el.addEventListener(k.slice(2).toLowerCase(), v);
     else if (k === 'cls') el.className = v;
     else if (k === 'html') el.innerHTML = v;
+    else if (k === 'disabled') { if (v) el.setAttribute('disabled', ''); }
     else el.setAttribute(k, v);
   }
   for (const c of ch.flat()) {
