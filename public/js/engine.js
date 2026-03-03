@@ -38,6 +38,7 @@ const S = {
   minOdds: '', maxOdds: '', sportsbook: 'draftkings',
   selectedGame: null, singleResults: null, parlayResults: null,
   expandedIdx: null, expandedMath: null, expandedGroups: {},
+  _faqOpen: null,
 };
 
 function set(u) { Object.assign(S, u); render(); }

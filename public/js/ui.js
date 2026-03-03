@@ -26,6 +26,7 @@ function pgLanding() {
       h('div', { cls: 'nav-logo', onClick: () => set({ page: 'landing' }) }, h('div', { cls: 'crosshair' }, '🎯'), 'LineSnipes'),
       h('div', { cls: 'nav-links' },
         h('button', { cls: 'nbtn nbtn-g', onClick: () => set({ page: 'pricing' }) }, 'Pricing'),
+        h('button', { cls: 'nbtn nbtn-g', onClick: () => set({ page: 'faq' }) }, 'FAQ'),
         h('button', { cls: 'nbtn nbtn-g', onClick: () => set({ page: 'login' }) }, 'Log In'),
         h('button', { cls: 'nbtn nbtn-p', onClick: () => set({ page: 'signup' }) }, 'Get Started'),
       ),
@@ -133,7 +134,8 @@ function appHeader() {
         h('div', { cls: 'ubadge' }, h('span', {}, used + '/' + limit), h('div', { cls: 'ubar' }, h('div', { cls: 'ufill ' + bc, style: { width: pct + '%' } })))
         : h('div', { cls: 'ubadge' }, h('span', { style: { color: 'var(--accent)' } }, used + ' fetches')),
       h('div', { cls: 'anav', style: { display: 'flex', gap: '4px' } },
-        h('button', { cls: S.page === 'app' ? 'on' : '', onClick: () => set({ page: 'app' }) }, 'Tool'),
+        h('button', { cls: S.page === 'app' ? 'on' : '', onClick: () => set({ page: 'app' }) }, 'EV Tool'),
+        h('button', { cls: S.page === 'faq' ? 'on' : '', onClick: () => set({ page: 'faq' }) }, 'FAQ'),
         h('button', { cls: S.page === 'settings' ? 'on' : '', onClick: () => set({ page: 'settings' }) }, 'Settings'),
       ),
     ),
@@ -412,6 +414,138 @@ function pgSettings() {
           } }, 'Apply'),
         ) : null,
         h('div', { id: 'promo-err', style: { color: 'var(--red)', fontSize: '12px', marginTop: '8px' } }),
+      ),
+    ),
+  );
+}
+
+// ─── FAQ PAGE ───
+function pgFaq() {
+  const faqSections = [
+    {
+      title: '📖 What is LineSnipes?',
+      items: [
+        {
+          q: 'What does LineSnipes do?',
+          a: 'LineSnipes finds positive expected value (+EV) bets by comparing the odds at your sportsbook against sharp betting lines from Pinnacle and other sharp sources. When your sportsbook offers better odds than the true fair probability suggests, that\'s a +EV bet — and we find them for you instantly.'
+        },
+        {
+          q: 'What is Expected Value (EV)?',
+          a: 'Expected Value is the average amount you\'d win (or lose) per bet if you placed it thousands of times. A +EV bet means the odds are in your favor over the long run. For example, if a bet has +5.2% EV on a $50 stake, you\'d expect to profit $2.60 on average per bet.'
+        },
+        {
+          q: 'What is "devigging" or "vig removal"?',
+          a: 'Sportsbooks build a margin (the "vig" or "juice") into their odds so they profit regardless of the outcome. Devigging strips that margin away to reveal the true fair probability. LineSnipes uses Pinnacle\'s odds as the sharp baseline and removes their vig to get fair probabilities, then compares those against your book\'s odds.'
+        },
+      ]
+    },
+    {
+      title: '🔬 How the Math Works',
+      items: [
+        {
+          q: 'How do you calculate fair probabilities?',
+          a: 'We use two methods depending on the market. For spreads, totals, and props, we use Multiplicative devigging — this divides each implied probability by the total overround, splitting the vig evenly. For moneylines with a heavy favorite (-150 or shorter), we use the Shin method, which redistributes vig non-linearly. This is more accurate because sportsbooks load more vig onto longshots than favorites.'
+        },
+        {
+          q: 'Can you give me a real example?',
+          a: 'Say Pinnacle has Lakers -180 / Celtics +160. The implied probabilities are 64.3% and 38.5% = 102.8% total (2.8% vig). After Shin devigging, the fair probs become roughly 63.1% and 36.9%. If DraftKings has Celtics at +175 (decimal 2.75), the EV = (36.9% × $2.75) - $1.00 = +1.5%. That means on a $50 bet, you\'d expect +$0.75 profit on average.'
+        },
+        {
+          q: 'Why do you use Pinnacle as the sharp line?',
+          a: 'Pinnacle accepts the highest limits in the world and doesn\'t ban winning bettors. This means their lines are shaped by the sharpest money in the market. When Pinnacle isn\'t available (common for NBA/NHL/NCAAB props), we fall back to a consensus average of DraftKings, FanDuel, and BetMGM.'
+        },
+        {
+          q: 'What\'s the difference between Multiplicative and Shin devigging?',
+          a: 'Multiplicative splits the vig evenly across all outcomes — simple and accurate for balanced markets like spreads. Shin recognizes that books load more vig on longshots, so it gives favorites slightly higher fair probabilities and underdogs slightly lower ones. For a -300 vs +250 moneyline, Shin can shift fair probabilities by 1-2% compared to Multiplicative, which meaningfully affects EV calculations.'
+        },
+      ]
+    },
+    {
+      title: '🚀 Using the Tool',
+      items: [
+        {
+          q: 'How do I use LineSnipes?',
+          a: '1) Select your bonus type (Profit Boost, Risk-Free, Odds Boost, or Parlay Boost). 2) Enter your boost percentage and max bet amount. 3) Pick your sportsbook. 4) Select a sport and click Fetch Live Odds. 5) Click on any game to see all bets ranked by EV. Green = +EV (good), Red = -EV (avoid).'
+        },
+        {
+          q: 'What are the different bonus types?',
+          a: 'Profit Boost: Your winnings are increased by a percentage (e.g., 50% profit boost on a +200 bet). Risk-Free: If you lose, you get a free bet back (valued at ~70% of stake). Odds Boost: The actual odds are multiplied by the boost percentage. Parlay Boost: A profit boost applied to a parlay — we find the optimal combination of legs.'
+        },
+        {
+          q: 'What does the parlay optimizer do?',
+          a: 'When you select Parlay Boost, LineSnipes tests thousands of leg combinations across all available games and ranks them by EV. It supports Standard parlays (one leg per game), SGP (all legs from one game, different markets), and SGP+ (2+ legs from one game plus legs from other games).'
+        },
+        {
+          q: 'What do the filters do?',
+          a: 'Min/Max Odds filters let you narrow results. For example, set Min Odds to -200 and Max Odds to +500 to only see bets in that range. This is useful when your promo has restrictions like "odds must be +100 or longer."'
+        },
+      ]
+    },
+    {
+      title: '💡 Tips & Strategy',
+      items: [
+        {
+          q: 'Should I always take the highest EV bet?',
+          a: 'Generally yes — over hundreds of bets, the highest EV options will produce the most profit. But consider variance: a +3% EV bet at -200 will hit more often than a +5% EV bet at +400. If you\'re placing fewer bets, lower-variance (shorter odds) +EV bets give more consistent results.'
+        },
+        {
+          q: 'How many fetches do I need per day?',
+          a: 'Most casual bettors use 1-3 fetches per day — one per sport they\'re interested in. Lines move fast though, so if you\'re hunting the best edges, you might fetch the same sport multiple times as odds shift. The Unlimited plan removes any worry about running out.'
+        },
+        {
+          q: 'Why do some games show "No sharp lines"?',
+          a: 'This means Pinnacle (or our consensus sources) don\'t have odds for that game yet. This is common for games far in the future or niche markets. Check back closer to game time.'
+        },
+        {
+          q: 'Can I lose money on +EV bets?',
+          a: 'Absolutely — in the short term. +EV means you have an edge over the long run, not that every bet wins. Think of it like a casino: the house has a small edge on every spin, but individual players can win big on any given night. With +EV betting, YOU are the house. The math is on your side over hundreds of bets.'
+        },
+      ]
+    },
+    {
+      title: '💳 Account & Billing',
+      items: [
+        {
+          q: 'How does the free trial work?',
+          a: 'You get 10 odds fetches completely free — no credit card required. Each fetch pulls live odds for one sport and counts as one use. All features are available during the trial.'
+        },
+        {
+          q: 'What happens when I hit my fetch limit?',
+          a: 'You\'ll see an upgrade prompt. Your existing results stay visible, but you can\'t fetch new odds until you upgrade or your limit resets (monthly for paid plans).'
+        },
+        {
+          q: 'Can I cancel anytime?',
+          a: 'Yes — Standard and Unlimited plans are monthly subscriptions you can cancel anytime from the Settings page. Lifetime is a one-time payment with no recurring charges.'
+        },
+      ]
+    },
+  ];
+
+  return h('div', {},
+    appHeader(),
+    h('div', { cls: 'container-sm', style: { paddingTop: '24px', paddingBottom: '80px' } },
+      h('h2', { style: { fontFamily: 'var(--display)', fontSize: '28px', color: '#fff', fontWeight: '800', marginBottom: '8px' } }, 'FAQ & How It Works'),
+      h('p', { style: { color: 'var(--fg2)', fontSize: '14px', marginBottom: '28px' } }, 'Everything you need to know about finding +EV bets with LineSnipes.'),
+      ...faqSections.map(section =>
+        h('div', { style: { marginBottom: '28px' } },
+          h('h3', { style: { fontFamily: 'var(--display)', fontSize: '18px', color: '#fff', fontWeight: '700', marginBottom: '12px' } }, section.title),
+          ...section.items.map((item, idx) => {
+            const faqKey = section.title + idx;
+            const isOpen = S._faqOpen === faqKey;
+            return h('div', { style: {
+              background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '10px', marginBottom: '6px', overflow: 'hidden',
+            } },
+              h('button', { style: {
+                width: '100%', textAlign: 'left', padding: '14px 16px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg)',
+                fontFamily: 'var(--font)', fontSize: '13.5px', fontWeight: '600', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              }, onClick: () => { S._faqOpen = isOpen ? null : faqKey; render(); } },
+                h('span', {}, item.q),
+                h('span', { style: { color: 'var(--fg3)', fontSize: '16px', transition: 'transform .2s', transform: isOpen ? 'rotate(180deg)' : 'rotate(0)' } }, '▾'),
+              ),
+              isOpen ? h('div', { style: { padding: '0 16px 14px', fontSize: '13px', lineHeight: '1.7', color: 'var(--fg2)' } }, item.a) : null,
+            );
+          }),
+        ),
       ),
     ),
   );
