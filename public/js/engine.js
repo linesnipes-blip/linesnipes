@@ -150,16 +150,23 @@ function getConsensusOutcomes(game, marketKey) {
     if (!mkt) continue;
     count++;
     for (const o of mkt.outcomes) {
-      const key = o.name + '|' + (o.point ?? '');
-      if (!allOutcomes.has(key)) allOutcomes.set(key, { name: o.name, point: o.point, prices: [] });
+      const key = o.name + '|' + (o.point ?? '') + '|' + (o.description || '');
+      if (!allOutcomes.has(key)) allOutcomes.set(key, { name: o.name, point: o.point, description: o.description, prices: [] });
       allOutcomes.get(key).prices.push(o.price);
     }
   }
-  if (count < 2) return null; // need at least 2 books for consensus
+  if (count < 2) return null;
   const result = [];
   for (const [, v] of allOutcomes) {
-    const avg = v.prices.reduce((s, p) => s + p, 0) / v.prices.length;
-    result.push({ name: v.name, point: v.point, price: avg });
+    // Use median instead of mean — more robust against outlier books
+    const sorted = [...v.prices].sort((a, b) => a - b);
+    const mid = Math.floor(sorted.length / 2);
+    const median = sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+    // Skip outcomes where books disagree wildly (max/min ratio > 2x)
+    if (sorted.length >= 2 && sorted[sorted.length - 1] / sorted[0] > 2) continue;
+    const out = { name: v.name, point: v.point, price: median };
+    if (v.description) out.description = v.description;
+    result.push(out);
   }
   return result.length >= 2 ? result : null;
 }
@@ -491,8 +498,7 @@ function analyzeGame({ game, bookKey, bonusType, boostPct, maxBet }) {
           outcome: o.name, point: o.point, bookDecimal: o.price,
           fairProb: f.fairProb, fairDecimal: f.fairDecimal, sharpBook: sharpTitle,
           gameShort: game.away_team.split(' ').pop() + ' @ ' + game.home_team.split(' ').pop(),
-        });
-      }
+      });
     }
   }
   return results.sort((a, b) => b.evPct - a.evPct);
