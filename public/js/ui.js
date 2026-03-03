@@ -268,6 +268,62 @@ function betCard(r, idx, compact) {
 }
 
 // ─── GAME CARDS (single bet mode) ───
+// --- TOP PICKS (best EV across all games) ---
+function topPicks() {
+  if (!S.odds || !S.odds.length) return null;
+  if (S.bonusType === 'parlay_boost') return null;
+
+  const allBets = [];
+  for (const game of S.odds) {
+    const results = analyzeGame({
+      game, bookKey: S.sportsbook,
+      bonusType: S.bonusType,
+      boostPct: parseFloat(S.boostPct) || 0,
+      maxBet: parseFloat(S.maxBet) || 50,
+    });
+    for (const r of results) {
+      if (!passFilter(r.bookDecimal, S.minOdds, S.maxOdds)) continue;
+      allBets.push({ ...r, gameId: game.id, gameName: game.away_team + ' @ ' + game.home_team,
+        gameShort: r.gameShort || (game.away_team.split(' ').pop() + ' @ ' + game.home_team.split(' ').pop()) });
+    }
+  }
+
+  allBets.sort((a, b) => b.evPct - a.evPct);
+  const top = allBets.slice(0, 5);
+  if (!top.length) return null;
+  const posCount = top.filter(t => t.evPct > 0).length;
+
+  return h('div', { cls: 'card', style: { marginBottom: '16px', animation: 'fadeUp .3s ease' } },
+    h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' } },
+      h('div', { cls: 'stitle', style: { margin: '0' } },
+        h('span', { style: { color: '#ffd700' } }, '\u2605'), ' Top Picks'),
+      h('span', { style: { fontSize: '10px', color: 'var(--fg3)' } }, posCount + '/5 +EV \xb7 All games')),
+    h('div', { style: { display: 'grid', gap: '4px' } },
+      ...top.map((r, i) => {
+        const pos = r.evPct > 0;
+        const isFirst = i === 0 && pos;
+        return h('div', { style: {
+          background: isFirst ? 'rgba(255,215,0,.06)' : 'rgba(255,255,255,.02)',
+          border: isFirst ? '1px solid rgba(255,215,0,.15)' : '1px solid rgba(255,255,255,.04)',
+          borderRadius: '8px', padding: '10px 12px',
+        } },
+          h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } },
+            h('div', { style: { flex: '1' } },
+              h('div', { style: { display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' } },
+                isFirst ? h('span', { style: { fontSize: '8px', fontWeight: '700', background: 'rgba(255,215,0,.2)', color: '#ffd700', padding: '1px 6px', borderRadius: '3px', letterSpacing: '.5px', textTransform: 'uppercase' } }, '#1 Pick') : null,
+                i > 0 ? h('span', { style: { fontSize: '8px', fontWeight: '600', color: 'var(--fg3)', padding: '1px 4px' } }, '#' + (i+1)) : null,
+                h('span', { style: { fontFamily: 'var(--display)', fontSize: '12px', fontWeight: '600', color: '#fff' } },
+                  r.outcome + (r.point != null ? ' (' + (r.point > 0 ? '+' : '') + r.point + ')' : ''))),
+              h('div', { style: { fontSize: '10px', color: 'var(--fg3)' } },
+                r.gameShort + ' \xb7 ' + r.marketLabel + ' \xb7 ' + amOdds(r.bookDecimal) + ' \xb7 Fair ' + (r.fairProb * 100).toFixed(1) + '%')),
+            h('div', { style: { textAlign: 'right' } },
+              h('div', { cls: 'ev-badge ' + (pos ? 'ev-pos' : 'ev-neg'), style: { fontSize: '12px', fontWeight: '700' } }, (pos ? '+' : '') + r.evPct.toFixed(2) + '%'),
+              h('div', { style: { fontSize: '9px', color: pos ? '#00c853' : '#ff4757', marginTop: '2px' } }, (r.ev >= 0 ? '+' : '') + '$' + r.ev.toFixed(2) + ' EV'))),
+        );
+      })),
+  );
+}
+
 function gameCards() {
   const games = S.odds || [], book = BOOKS.find(b => b.key === S.sportsbook);
   const withBook = games.filter(g => g.bookmakers?.some(b => b.key === S.sportsbook));
@@ -403,6 +459,7 @@ function pgApp() {
           : h('button', { cls: 'fbtn', disabled: S.loading || !S.sport, onClick: fetchOdds },
               S.loading ? 'Fetching live odds...' : isP ? 'Fetch Odds & Find Best Parlays' : 'Fetch Live Odds'))),
       isP && S.parlayResults ? parlayResults() : null,
+      !isP && S.odds ? topPicks() : null,
       !isP && S.odds ? gameCards() : null,
       h('div', { style: { textAlign: 'center', marginTop: '28px', fontSize: '10px', color: '#1e2e40', lineHeight: '1.6' } },
         'Fair probabilities via multiplicative vig removal from sharp lines'),
