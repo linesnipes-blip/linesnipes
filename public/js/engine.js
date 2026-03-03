@@ -190,6 +190,21 @@ function passFilter(dec, minS, maxS) {
   return true;
 }
 
+// Validate sharp outcomes — reject garbage data
+function isValidSharp(outcomes) {
+  if (!outcomes || outcomes.length < 2) return false;
+  for (const o of outcomes) {
+    // Reject if any price is <= 1.01 (no real odds) or > 100 (nonsensical)
+    if (o.price <= 1.01 || o.price > 100) return false;
+  }
+  // For 2-way markets, implied probs should sum to roughly 100-115%
+  if (outcomes.length === 2) {
+    const totalImpl = outcomes.reduce((s, o) => s + 1/o.price, 0);
+    if (totalImpl < 0.90 || totalImpl > 1.20) return false;
+  }
+  return true;
+}
+
 function calcEV({ bonusType, boostPct, maxBet, bookDecimal, fairProb }) {
   const stake = maxBet;
   const fairDecimal = 1 / fairProb;
@@ -265,7 +280,7 @@ function extractAllOutcomes(games, bookKey) {
       if (!sharpOutcomes) {
         const sharp = g.bookmakers?.find(b => b.key === 'pinnacle');
         const sm = sharp?.markets?.find(x => x.key === m.key);
-        if (sm && sm.outcomes.length >= 2) {
+        if (sm && isValidSharp(sm.outcomes)) {
           sharpOutcomes = sm.outcomes;
           sharpName = sharp.title || 'Pinnacle';
         }
@@ -277,7 +292,7 @@ function extractAllOutcomes(games, bookKey) {
           if (sk === 'pinnacle' || sk === bookKey) continue;
           const sb = g.bookmakers?.find(b => b.key === sk);
           const sm = sb?.markets?.find(x => x.key === m.key);
-          if (sm && sm.outcomes.length >= 2) {
+          if (sm && isValidSharp(sm.outcomes)) {
             sharpOutcomes = sm.outcomes;
             sharpName = sb.title || sk;
             break;
@@ -450,7 +465,7 @@ function analyzeGame({ game, bookKey, bonusType, boostPct, maxBet }) {
     let sharpOutcomes = null, sharpTitle = '';
     if (sharp) {
       const sm = sharp.markets?.find(x => x.key === m.key);
-      if (sm && sm.outcomes.length >= 2) { sharpOutcomes = sm.outcomes; sharpTitle = sharp.title || 'Pinnacle'; }
+      if (sm && isValidSharp(sm.outcomes)) { sharpOutcomes = sm.outcomes; sharpTitle = sharp.title || 'Pinnacle'; }
     }
     if (!sharpOutcomes && isPropMkt(m.key)) {
       // Consensus fallback — ONLY for props
