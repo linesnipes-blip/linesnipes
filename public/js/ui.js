@@ -182,7 +182,7 @@ function mathBlock(lines, open, toggle) {
           fontSize: '12px', fontFamily: 'var(--mono)', padding: '3px 0',
           color: isH ? 'var(--accent)' : l.startsWith('EV') ? 'var(--accent)' : 'var(--fg2)',
           fontWeight: isH || l.startsWith('EV') ? '700' : '400',
-          ...(isH ? { paddingTop: '6px', borderTop: '1px solid rgba(80,134,242,.1)' } : {}),
+          ...(isH ? { paddingTop: '6px', borderTop: '1px solid rgba(155,201,242,.1)' } : {}),
         } }, l);
       })
     ) : null,
@@ -194,7 +194,7 @@ function parlayResults() {
   const results = (S.parlayResults || []).filter(p => passFilter(p.parlayDecimal, S.minOdds, S.maxOdds));
   const icon = S.parlayMode === 'sgp' ? '🎯' : S.parlayMode === 'sgpx' ? '🔀' : '🔗';
   const ml = S.parlayMode === 'sgp' ? 'SGP' : S.parlayMode === 'sgpx' ? 'SGP+' : 'Parlays';
-  return h('div', { cls: 'card', style: { borderColor: 'rgba(80,134,242,.12)', background: 'linear-gradient(180deg,rgba(80,134,242,.025) 0%,transparent 100%)', animation: 'fadeUp .4s ease' } },
+  return h('div', { cls: 'card', style: { borderColor: 'rgba(155,201,242,.12)', background: 'linear-gradient(180deg,rgba(155,201,242,.025) 0%,transparent 100%)', animation: 'fadeUp .4s ease' } },
     h('div', { style: { display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' } },
       h('span', { style: { fontSize: '18px' } }, icon),
       h('div', { style: { fontFamily: 'var(--display)', fontSize: '16px', fontWeight: '800', color: '#fff' } }, 'Best ' + S.numLegs + '-Leg ' + ml)),
@@ -205,8 +205,8 @@ function parlayResults() {
       ...results.map((p, idx) => {
         const open = S.expandedIdx === idx, pos = p.evPct > 0;
         return h('div', { style: {
-          background: idx === 0 && pos ? 'rgba(80,134,242,.05)' : 'var(--card)',
-          border: idx === 0 && pos ? '1px solid rgba(80,134,242,.12)' : '1px solid var(--border)',
+          background: idx === 0 && pos ? 'rgba(155,201,242,.05)' : 'var(--card)',
+          border: idx === 0 && pos ? '1px solid rgba(155,201,242,.12)' : '1px solid var(--border)',
           borderRadius: '10px', overflow: 'hidden',
         } },
           h('button', { style: { width: '100%', textAlign: 'left', padding: '12px 14px', fontFamily: 'inherit', cursor: 'pointer', background: 'none', border: 'none', color: 'var(--fg)' },
@@ -214,20 +214,20 @@ function parlayResults() {
             h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } },
               h('div', {},
                 h('div', { style: { display: 'flex', flexWrap: 'wrap', gap: '4px', marginBottom: '4px' } },
-                  ...p.legs.map((l, i) => h('span', { style: { fontSize: '10px', background: 'rgba(80,134,242,.08)', color: 'var(--accent)', padding: '2px 8px', borderRadius: '4px', fontFamily: 'var(--mono)' } },
+                  ...p.legs.map((l, i) => h('span', { style: { fontSize: '10px', background: 'rgba(155,201,242,.08)', color: 'var(--accent)', padding: '2px 8px', borderRadius: '4px', fontFamily: 'var(--mono)' } },
                     (i + 1) + '. ' + l.outcome + (l.point != null ? ' (' + (l.point > 0 ? '+' : '') + l.point + ')' : '')))),
                 h('div', { style: { fontSize: '10px', color: 'var(--fg3)' } },
                   p.uniqueGames + ' game' + (p.uniqueGames > 1 ? 's' : '') + ' · ' + amOdds(p.parlayDecimal) + ' parlay')),
               h('div', { style: { textAlign: 'right', marginLeft: '12px' } },
                 h('span', { cls: 'ev-badge ' + (pos ? 'ev-pos' : 'ev-neg') }, (pos ? '+' : '') + p.evPct.toFixed(2) + '% EV'),
-                h('div', { style: { fontSize: '10px', color: pos ? '#5086F2' : '#ff6b6b', fontWeight: '600', marginTop: '2px', fontFamily: 'var(--mono)' } },
+                h('div', { style: { fontSize: '10px', color: pos ? '#9BCAF2' : '#ff6b6b', fontWeight: '600', marginTop: '2px', fontFamily: 'var(--mono)' } },
                   (pos ? '+' : '') + '$' + p.ev.toFixed(2))),
             )),
           open ? h('div', { style: { padding: '0 14px 14px', animation: 'fadeIn .2s' } },
             h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px', marginBottom: '8px' } },
               h('div', { cls: 'sbox' }, h('div', { cls: 'sl' }, 'Stake'), h('div', { cls: 'sv' }, '$' + p.stake.toFixed(0))),
               h('div', { cls: 'sbox' }, h('div', { cls: 'sl' }, 'Fair Prob'), h('div', { cls: 'sv' }, (p.combinedFairProb * 100).toFixed(3) + '%')),
-              h('div', { cls: 'sbox' }, h('div', { cls: 'sl' }, 'Edge'), h('div', { cls: 'sv', style: { color: pos ? '#5086F2' : '#ff6b6b' } }, (pos ? '+' : '') + p.evPct.toFixed(2) + '%'))),
+              h('div', { cls: 'sbox' }, h('div', { cls: 'sl' }, 'Edge'), h('div', { cls: 'sv', style: { color: pos ? '#9BCAF2' : '#ff6b6b' } }, (pos ? '+' : '') + p.evPct.toFixed(2) + '%'))),
             mathBlock(p.math, S.expandedMath === idx, () => set({ expandedMath: S.expandedMath === idx ? null : idx })),
           ) : null,
         );
@@ -266,7 +266,7 @@ function gameCards() {
               ) : null,
             )),
           active && gr ? h('div', { style: { padding: '0 12px 12px', animation: 'fadeIn .25s' } },
-            h('div', { style: { borderTop: '1px solid rgba(80,134,242,.1)', paddingTop: '10px', marginTop: '2px' } },
+            h('div', { style: { borderTop: '1px solid rgba(155,201,242,.1)', paddingTop: '10px', marginTop: '2px' } },
               h('div', { style: { fontSize: '10.5px', color: 'var(--fg3)', marginBottom: '8px' } },
                 'Sharp: ' + (gr[0]?.sharpBook || 'Pinnacle') + ' · ' + gr.filter(r => r.evPct > 0).length + ' +EV bets'),
               !gr.length ? h('div', { style: { textAlign: 'center', padding: '12px', color: 'var(--fg3)', fontSize: '12px' } }, 'No matching markets.')
@@ -274,8 +274,8 @@ function gameCards() {
                 ...gr.map((r, idx) => {
                   const open = S.expandedIdx === idx, pos = r.evPct > 0;
                   return h('div', { style: {
-                    background: idx === 0 && pos ? 'rgba(80,134,242,.05)' : 'rgba(255,255,255,.02)',
-                    border: idx === 0 && pos ? '1px solid rgba(80,134,242,.12)' : '1px solid rgba(255,255,255,.04)',
+                    background: idx === 0 && pos ? 'rgba(155,201,242,.05)' : 'rgba(255,255,255,.02)',
+                    border: idx === 0 && pos ? '1px solid rgba(155,201,242,.12)' : '1px solid rgba(255,255,255,.04)',
                     borderRadius: '8px', overflow: 'hidden',
                   } },
                     h('button', { style: { width: '100%', textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit', background: 'none', border: 'none', padding: '10px 12px', color: 'var(--fg)' },
@@ -283,7 +283,7 @@ function gameCards() {
                       h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } },
                         h('div', { style: { flex: '1' } },
                           h('div', { style: { display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' } },
-                            idx === 0 && pos ? h('span', { style: { fontSize: '8px', fontWeight: '700', background: 'rgba(80,134,242,.15)', color: 'var(--accent)', padding: '1px 6px', borderRadius: '3px', letterSpacing: '.5px', textTransform: 'uppercase' } }, 'Best') : null,
+                            idx === 0 && pos ? h('span', { style: { fontSize: '8px', fontWeight: '700', background: 'rgba(155,201,242,.15)', color: 'var(--accent)', padding: '1px 6px', borderRadius: '3px', letterSpacing: '.5px', textTransform: 'uppercase' } }, 'Best') : null,
                             h('span', { style: { fontFamily: 'var(--display)', fontSize: '12px', fontWeight: '600', color: '#fff' } },
                               r.outcome + ' ' + (r.point != null ? '(' + (r.point > 0 ? '+' : '') + r.point + ')' : ''))),
                           h('div', { style: { fontSize: '10px', color: 'var(--fg3)' } },
@@ -293,7 +293,7 @@ function gameCards() {
                       h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px', marginBottom: '8px' } },
                         h('div', { cls: 'sbox' }, h('div', { cls: 'sl' }, 'Stake'), h('div', { cls: 'sv' }, '$' + r.stake.toFixed(0))),
                         h('div', { cls: 'sbox' }, h('div', { cls: 'sl' }, 'Fair Prob'), h('div', { cls: 'sv' }, (r.fairProb * 100).toFixed(2) + '%')),
-                        h('div', { cls: 'sbox' }, h('div', { cls: 'sl' }, 'EV'), h('div', { cls: 'sv', style: { color: pos ? '#5086F2' : '#ff6b6b' } }, (pos ? '+' : '') + '$' + r.ev.toFixed(2)))),
+                        h('div', { cls: 'sbox' }, h('div', { cls: 'sl' }, 'EV'), h('div', { cls: 'sv', style: { color: pos ? '#9BCAF2' : '#ff6b6b' } }, (pos ? '+' : '') + '$' + r.ev.toFixed(2)))),
                       mathBlock(r.math, S.expandedMath === idx, () => set({ expandedMath: S.expandedMath === idx ? null : idx })),
                     ) : null,
                   );
