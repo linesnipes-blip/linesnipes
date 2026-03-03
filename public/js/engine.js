@@ -293,7 +293,11 @@ function scoreParlays(combos, stake, boostPct, topN) {
     const pd = legs.reduce((d, l) => d * l.bookDecimal, 1);
     const np = (pd - 1) * stake, bp = np * (1 + boostPct / 100);
     const bpay = stake + bp, bd = bpay / stake;
-    const ev = cfp * bpay - stake, evPct = (ev / stake) * 100;
+    const ev = cfp * bpay - stake;
+    const fairDecimal = 1 / cfp;
+    const evPct = (bd / fairDecimal - 1) * 100;
+    const legEVs = legs.map(l => ((l.bookDecimal / l.fairDecimal) - 1) * 100);
+    const avgLegEV = legEVs.reduce((s, v) => s + v, 0) / legEVs.length;
     const ug = new Set(legs.map(l => l.gameId)).size;
     const math = [
       '── LEG PROBABILITIES ──',
@@ -307,9 +311,10 @@ function scoreParlays(combos, stake, boostPct, topN) {
       `Boosted payout: $${bpay.toFixed(2)} (${amOdds(bd)})`,
       '', '── EXPECTED VALUE ──',
       `EV = ${(cfp*100).toFixed(4)}% × $${bpay.toFixed(2)} − $${stake.toFixed(2)} = $${ev.toFixed(2)}`,
-      `EV% = ${evPct.toFixed(2)}%`,
+      `EV% (edge over fair): ${evPct.toFixed(2)}%`,
+      `Avg leg EV: ${avgLegEV.toFixed(2)}%`,
     ];
-    return { legs, combinedFairProb: cfp, parlayDecimal: pd, boostedDecimal: bd, boostedPayout: bpay, ev, evPct, stake, math, uniqueGames: ug };
+    return { legs, combinedFairProb: cfp, parlayDecimal: pd, boostedDecimal: bd, boostedPayout: bpay, ev, evPct, avgLegEV, stake, math, uniqueGames: ug };
   }).sort((a, b) => b.evPct - a.evPct).slice(0, topN);
 }
 
