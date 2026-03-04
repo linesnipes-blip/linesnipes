@@ -121,10 +121,52 @@ function pgAuth(mode) {
       if (!em || !pw) { errEl.innerHTML = '<div class="aerr">Please fill in all fields.</div>'; return; }
       btn.disabled = true; btn.textContent = isLogin ? 'Logging in...' : 'Creating account...';
       const err = isLogin ? await doLogin(em, pw) : await doSignup(em, pw);
+      if (err === '__DEVICE_LIMIT__') {
+        btn.disabled = false; btn.textContent = 'Create Account';
+        showDeviceLimitPopup();
+        return;
+      }
       if (err) { errEl.innerHTML = '<div class="aerr">' + err + '</div>'; btn.disabled = false; btn.textContent = isLogin ? 'Log In' : 'Create Account'; }
     };
   }, 0);
   return box;
+}
+
+function showDeviceLimitPopup() {
+  const overlay = h('div', { style: {
+    position: 'fixed', inset: '0', background: 'rgba(0,0,0,.75)', backdropFilter: 'blur(8px)',
+    display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: '9999',
+    animation: 'fadeIn .3s ease',
+  }, onClick: (e) => { if (e.target === overlay) overlay.remove(); } },
+    h('div', { style: {
+      background: 'linear-gradient(145deg, #0f1923 0%, #162435 100%)',
+      border: '1px solid rgba(155,201,242,.15)', borderRadius: '20px',
+      padding: '36px 32px', maxWidth: '380px', width: '90%', textAlign: 'center',
+      boxShadow: '0 25px 60px rgba(0,0,0,.5)',
+    } },
+      h('div', { style: { fontSize: '48px', marginBottom: '16px' } }, '\uD83D\uDD2D'),
+      h('div', { style: { fontFamily: 'var(--display)', fontSize: '20px', fontWeight: '800', color: '#fff', marginBottom: '8px' } },
+        'We see you, sharp bettor \uD83D\uDC40'),
+      h('div', { style: { fontSize: '14px', color: 'var(--fg2)', lineHeight: '1.6', marginBottom: '8px' } },
+        'Looks like you\'ve already created a couple of free accounts on this device.'),
+      h('div', { style: { fontSize: '13px', color: 'var(--fg3)', lineHeight: '1.6', marginBottom: '24px' } },
+        'We get it \u2014 free edges are hard to resist. But the real edge? Unlimited access to every sport, every market, every boost. No limits.'),
+      h('div', { style: { display: 'flex', flexDirection: 'column', gap: '10px' } },
+        h('button', { style: {
+          padding: '14px 28px', borderRadius: '12px', fontWeight: '700', fontSize: '14px', cursor: 'pointer',
+          background: 'linear-gradient(135deg, var(--accent), var(--accent2))', color: 'var(--bg)',
+          border: 'none', fontFamily: 'var(--display)', letterSpacing: '.3px',
+        }, onClick: () => { overlay.remove(); set({ page: 'pricing' }); } },
+          '\uD83D\uDE80 View Plans \u2014 Starting at $29.99/mo'),
+        h('button', { style: {
+          padding: '10px 20px', borderRadius: '10px', fontSize: '12px', cursor: 'pointer',
+          background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.08)',
+          color: 'var(--fg3)', fontFamily: 'var(--display)',
+        }, onClick: () => { overlay.remove(); set({ page: 'login' }); } },
+          'I already have an account \u2014 Log in')),
+    ),
+  );
+  document.body.appendChild(overlay);
 }
 
 // ─── APP HEADER ───

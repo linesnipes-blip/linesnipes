@@ -15,6 +15,77 @@ try {
   }
 } catch (e) { console.warn('Supabase not configured yet'); }
 
+// ─── DEVICE FINGERPRINT ───
+async function getDeviceFingerprint() {
+  const components = [];
+  // Screen
+  components.push(screen.width + 'x' + screen.height + 'x' + screen.colorDepth);
+  // Timezone
+  components.push(Intl.DateTimeFormat().resolvedOptions().timeZone);
+  // Languages
+  components.push((navigator.languages || [navigator.language]).join(','));
+  // Platform
+  components.push(navigator.platform || '');
+  // Hardware concurrency
+  components.push(navigator.hardwareConcurrency || '');
+  // Device memory
+  components.push(navigator.deviceMemory || '');
+  // Touch support
+  components.push(navigator.maxTouchPoints || 0);
+  // Canvas fingerprint
+  try {
+    const c = document.createElement('canvas');
+    c.width = 200; c.height = 50;
+    const ctx = c.getContext('2d');
+    ctx.textBaseline = 'top';
+    ctx.font = '14px Arial';
+    ctx.fillStyle = '#f60';
+    ctx.fillRect(50, 0, 100, 50);
+    ctx.fillStyle = '#069';
+    ctx.fillText('LineSnipes🎯', 2, 15);
+    ctx.fillStyle = 'rgba(102,204,0,0.7)';
+    ctx.fillText('LineSnipes🎯', 4, 17);
+    components.push(c.toDataURL());
+  } catch (e) { components.push('no-canvas'); }
+  // WebGL renderer
+  try {
+    const gl = document.createElement('canvas').getContext('webgl');
+    const ext = gl.getExtension('WEBGL_debug_renderer_info');
+    if (ext) {
+      components.push(gl.getParameter(ext.UNMASKED_VENDOR_WEBGL));
+      components.push(gl.getParameter(ext.UNMASKED_RENDERER_WEBGL));
+    }
+  } catch (e) { components.push('no-webgl'); }
+  // Hash it
+  const raw = components.join('|||');
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(raw));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function checkDeviceSignups() {
+  try {
+    const fp = await getDeviceFingerprint();
+    const res = await fetch(CONFIG.API_BASE + '/fingerprint', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fingerprint: fp }),
+    });
+    const data = await res.json();
+    return data;
+  } catch (e) { return { allowed: true, count: 0 }; }
+}
+
+async function recordDeviceSignup() {
+  try {
+    const fp = await getDeviceFingerprint();
+    await fetch(CONFIG.API_BASE + '/fingerprint', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fingerprint: fp }),
+    });
+  } catch (e) { /* silent */ }
+}
+
 // ─── PROMO CODES ───
 async function applyPromo(code) {
   const c = (code || '').trim().toUpperCase();
@@ -631,9 +702,15 @@ async function doLogout() {
 
 async function doSignup(email, pw) {
   if (!sb) return 'Supabase not configured yet. Coming soon!';
+  // Check device fingerprint
+  const fpCheck = await checkDeviceSignups();
+  if (fpCheck && !fpCheck.allowed) return '__DEVICE_LIMIT__';
   const { data, error } = await sb.auth.signUp({ email, password: pw });
   if (error) return error.message;
-  if (data.user) { set({ user: data.user, page: 'app' }); await loadProfile(); fetchSports(); }
+  if (data.user) {
+    await recordDeviceSignup();
+    set({ user: data.user, page: 'app' }); await loadProfile(); fetchSports();
+  }
   return null;
 }
 
