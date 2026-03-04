@@ -38,6 +38,7 @@ const S = {
   minOdds: '', maxOdds: '', sportsbook: 'draftkings',
   selectedGame: null, singleResults: null, parlayResults: null,
   expandedIdx: null, expandedMath: null, expandedGroups: {}, excludedTeams: new Set(),
+  liveOnly: false,
   _faqOpen: null,
 };
 
@@ -569,7 +570,8 @@ async function fetchOdds() {
     if (!odds.length) { set({ error: 'No games found for this sport right now.', loading: false }); return; }
     let parlayResults = null;
     if (S.bonusType === 'parlay_boost') {
-      const ao = extractAllOutcomes(odds, S.sportsbook).filter(o => !S.excludedTeams.has(o.game));
+      const filteredOdds = S.liveOnly ? odds.filter(g => new Date(g.commence_time) <= new Date()) : odds;
+      const ao = extractAllOutcomes(filteredOdds, S.sportsbook).filter(o => !S.excludedTeams.has(o.game));
       parlayResults = findBestParlays({
         allOutcomes: ao, numLegs: parseInt(S.numLegs) || 3,
         boostPct: parseFloat(S.boostPct) || 0, maxBet: parseFloat(S.maxBet) || 50,
@@ -582,7 +584,8 @@ async function fetchOdds() {
 
 function rebuildParlays() {
   if (!S.odds || S.bonusType !== 'parlay_boost') return;
-  const ao = extractAllOutcomes(S.odds, S.sportsbook)
+  const filteredOdds = S.liveOnly ? S.odds.filter(g => new Date(g.commence_time) <= new Date()) : S.odds;
+  const ao = extractAllOutcomes(filteredOdds, S.sportsbook)
     .filter(o => !S.excludedTeams.has(o.game));
   const parlayResults = findBestParlays({
     allOutcomes: ao, numLegs: parseInt(S.numLegs) || 3,

@@ -20,6 +20,11 @@ function h(tag, a, ...ch) {
   return el;
 }
 
+function isGameLive(game) {
+  if (!game || !game.commence_time) return false;
+  return new Date(game.commence_time) <= new Date();
+}
+
 // ─── LANDING PAGE ───
 function pgLanding() {
   return h('div', {},
@@ -353,6 +358,7 @@ function topPicks() {
 
   const allBets = [];
   for (const game of S.odds) {
+    if (S.liveOnly && !isGameLive(game)) continue;
     const results = analyzeGame({
       game, bookKey: S.sportsbook,
       bonusType: S.bonusType,
@@ -415,12 +421,14 @@ function topPicks() {
 }
 
 function gameCards() {
-  const games = S.odds || [], book = BOOKS.find(b => b.key === S.sportsbook);
+  const allGames = S.odds || [], book = BOOKS.find(b => b.key === S.sportsbook);
+  const games = S.liveOnly ? allGames.filter(g => isGameLive(g)) : allGames;
   const withBook = games.filter(g => g.bookmakers?.some(b => b.key === S.sportsbook));
+  const liveCount = S.liveOnly ? games.length : null;
   return h('div', { style: { animation: 'fadeUp .35s ease' } },
-    !withBook.length ? h('div', { cls: 'ib ib-y' }, '⚠ ' + (book?.label || S.sportsbook) + ' has no odds for these games. Try a different sportsbook.') : null,
+    !withBook.length ? h('div', { cls: 'ib ib-y' }, S.liveOnly ? '⚠ No live games right now. Toggle off Live Only to see upcoming games.' : '⚠ ' + (book?.label || S.sportsbook) + ' has no odds for these games. Try a different sportsbook.') : null,
     h('div', { style: { fontSize: '12px', color: 'var(--fg3)', marginBottom: '10px' } },
-      games.length + ' games (' + withBook.length + ' with ' + (book?.label || '') + ')'),
+      games.length + ' games' + (S.liveOnly ? ' live' : '') + ' (' + withBook.length + ' with ' + (book?.label || '') + ')'),
     h('div', {},
       ...games.map(g => {
         const hasBook = g.bookmakers?.some(b => b.key === S.sportsbook);
@@ -530,6 +538,17 @@ function pgApp() {
         h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '14px' } },
           h('div', {}, h('div', { cls: 'lbl' }, 'Min Odds'), h('input', { type: 'text', value: S.minOdds, placeholder: 'e.g. -200', id: 'inp-minodds', onInput: (e) => { S.minOdds = e.target.value; } })),
           h('div', {}, h('div', { cls: 'lbl' }, 'Max Odds'), h('input', { type: 'text', value: S.maxOdds, placeholder: 'e.g. +500', id: 'inp-maxodds', onInput: (e) => { S.maxOdds = e.target.value; } }))),
+        h('div', { style: { display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' } },
+          h('button', { style: {
+            display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 14px', borderRadius: '20px', cursor: 'pointer',
+            fontSize: '11px', fontWeight: '700', fontFamily: 'var(--display)', letterSpacing: '.3px',
+            background: S.liveOnly ? 'rgba(255,59,48,.15)' : 'rgba(255,255,255,.04)',
+            border: S.liveOnly ? '1px solid rgba(255,59,48,.4)' : '1px solid rgba(255,255,255,.08)',
+            color: S.liveOnly ? '#ff3b30' : 'var(--fg3)',
+            transition: 'all .15s ease',
+          }, onClick: () => { set({ liveOnly: !S.liveOnly }); if (S.bonusType === 'parlay_boost' && S.odds) rebuildParlays(); } },
+            h('span', { style: { width: '6px', height: '6px', borderRadius: '50%', background: S.liveOnly ? '#ff3b30' : 'var(--fg3)', display: 'inline-block', animation: S.liveOnly ? 'pulse 1.5s infinite' : 'none' } }),
+            'Live Only')),
         h('div', { cls: 'lbl' }, 'Your Sportsbook'),
         h('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '4px' } },
           ...BOOKS.map(b => h('button', { cls: 'pill' + (S.sportsbook === b.key ? ' on' : ''),
