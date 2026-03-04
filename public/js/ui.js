@@ -301,7 +301,24 @@ function parlayDeepLinkBtn(legs, bookKey) {
       return makePlaceBtn(href, book, 'Add Parlay on ' + book.label);
     }
   }
-  // For FD and others: link to first leg (can't chain easily)
+  // For FanDuel: use array-indexed marketId[i] & selectionId[i] params
+  if (bookKey === 'fanduel') {
+    const pairs = legs.map(l => {
+      if (!l.deepLink) return null;
+      const mMatch = l.deepLink.match(/marketId=([^&]+)/);
+      const sMatch = l.deepLink.match(/selectionId=([^&]+)/);
+      if (mMatch && sMatch) return { marketId: mMatch[1], selectionId: sMatch[1] };
+      return null;
+    }).filter(Boolean);
+    if (pairs.length === legs.length) {
+      const params = pairs.map((p, i) =>
+        'marketId%5B' + i + '%5D=' + p.marketId + '&selectionId%5B' + i + '%5D=' + p.selectionId
+      ).join('&');
+      const href = 'https://sportsbook.fanduel.com/addToBetslip?' + params;
+      return makePlaceBtn(href, book, 'Add Parlay on ' + book.label);
+    }
+  }
+  // Fallback: link to first leg
   const firstLink = legs.find(l => l.deepLink)?.deepLink;
   if (firstLink) return makePlaceBtn(firstLink, book, 'Open on ' + book.label);
   return null;
