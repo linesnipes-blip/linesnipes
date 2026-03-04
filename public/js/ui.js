@@ -65,6 +65,35 @@ function pgLanding() {
       ),
     ),
     pgPricingSection(),
+    h('section', { cls: 'container', style: { paddingTop: '60px', paddingBottom: '60px' } },
+      h('h2', { cls: 'fade-up', style: { fontFamily: 'var(--display)', fontSize: '28px', fontWeight: '800', color: '#fff', textAlign: 'center', marginBottom: '32px' } }, 'Frequently Asked Questions'),
+      h('div', { style: { maxWidth: '680px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '10px' } },
+        ...[
+          { q: 'What is expected value (EV)?', a: 'EV means the odds are mathematically in YOUR favor, not the book\'s. A +EV bet means over hundreds of bets, the math guarantees profit. LineSnipes finds these automatically.' },
+          { q: 'How does LineSnipes find +EV bets?', a: 'We run every line against Pinnacle — the sharpest sportsbook in the world. When your book prices something differently than Pinnacle, our AI identifies the gap and ranks it by edge. No opinions, no hot takes, just math.' },
+          { q: 'Which sportsbooks are supported?', a: 'LineSnipes analyzes odds from DraftKings, FanDuel, BetMGM, Caesars, ESPN BET, Fanatics, BetRivers, Bovada, BetOnline, and Hard Rock. One-click bet slip adding works for DraftKings and FanDuel.' },
+          { q: 'What bonus types does it support?', a: 'Profit boosts, risk-free bets, odds boosts, and parlay boosts. Enter your boost percentage and max bet — LineSnipes recalculates your exact edge with the promo applied instantly.' },
+          { q: 'Can I use it on my phone?', a: 'Yes — LineSnipes is a Progressive Web App. On iPhone open in Safari → Share → Add to Home Screen. On Android open in Chrome → menu → Add to Home Screen. Launches full screen like a native app.' },
+          { q: 'Is it really free to start?', a: 'Yes. 10 free odds fetches, no credit card required. All features are available during the trial.' },
+        ].map(({ q, a }, i) => {
+          const key = 'lp_faq_' + i;
+          const open = S._lpFaq === key;
+          return h('div', { style: { background: 'rgba(255,255,255,.03)', border: '1px solid rgba(255,255,255,.07)', borderRadius: '10px', overflow: 'hidden' } },
+            h('button', {
+              style: { width: '100%', textAlign: 'left', background: 'none', border: 'none', padding: '14px 16px', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', color: '#fff', fontFamily: 'var(--display)', fontSize: '14px', fontWeight: '600' },
+              onClick: () => { S._lpFaq = open ? null : key; render(); }
+            },
+              h('span', {}, q),
+              h('span', { style: { fontSize: '18px', color: 'var(--fg3)', flexShrink: '0', transform: open ? 'rotate(45deg)' : 'none', transition: 'transform .2s' } }, '+')
+            ),
+            open ? h('div', { style: { padding: '0 16px 14px', fontSize: '13px', color: 'var(--fg2)', lineHeight: '1.6' } }, a) : null,
+          );
+        })
+      ),
+      h('div', { style: { textAlign: 'center', marginTop: '24px' } },
+        h('button', { style: { background: 'none', border: 'none', color: 'var(--fg3)', fontSize: '13px', cursor: 'pointer', textDecoration: 'underline' }, onClick: () => set({ page: 'faq' }) }, 'View full FAQ →')
+      ),
+    ),
     h('footer', { cls: 'footer container' }, h('p', {}, 'LineSnipes © 2026 · For education & entertainment only · Gamble responsibly')),
   );
 }
