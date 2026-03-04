@@ -732,6 +732,18 @@ function pgFaq() {
           q: 'What do the filters do?',
           a: 'Min/Max Odds filters let you narrow results. For example, set Min Odds to -200 and Max Odds to +500 to only see bets in that range. This is useful when your promo has restrictions like "odds must be +100 or longer."'
         },
+        {
+          q: 'Which sportsbooks support one-click betting?',
+          a: 'One-click bet slip adding is currently supported for DraftKings and FanDuel only. When you tap "Place on DraftKings" or "Place on FanDuel", the bet or full parlay is sent directly to your bet slip. Other sportsbooks don\'t yet offer a public deep link API, so for those you\'ll need to place the bet manually using the odds LineSnipes found.'
+        },
+        {
+          q: 'My parlay didn\'t send all legs to the bet slip — why?',
+          a: 'This happens when one or more legs don\'t have a valid deep link from the odds provider. Common reasons: the line moved and that outcome is no longer active, the market is a prop not supported by the sportsbook\'s bet slip API, or the odds were sourced from a sharp book (like Pinnacle) rather than directly from DraftKings or FanDuel. When a leg is missing, only the legs with valid links are sent. Try fetching fresh odds and rebuilding the parlay — links are most reliable for moneylines, spreads, and totals.'
+        },
+        {
+          q: 'Can I use LineSnipes as an app on my phone?',
+          a: 'Yes! LineSnipes is a Progressive Web App (PWA) — install it to your home screen without the App Store or Google Play. On iPhone: open in Safari, tap the Share button, then "Add to Home Screen." On Android: open in Chrome, tap the three-dot menu, then "Add to Home Screen" or "Install App." Once installed it opens full screen like a native app, loads faster, and works with your existing account.'
+        },
       ]
     },
     {
