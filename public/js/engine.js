@@ -514,6 +514,7 @@ function analyzeGame({ game, bookKey, bonusType, boostPct, maxBet }) {
           fairProb: f.fairProb, fairDecimal: f.fairDecimal, sharpBook: sharpTitle,
           gameShort: game.away_team.split(' ').pop() + ' @ ' + game.home_team.split(' ').pop(),
           playerName, devigMethod: 'Multiplicative',
+          deepLink: o.link || null, sid: o.sid || null,
         });
       }
     } else {
@@ -528,6 +529,7 @@ function analyzeGame({ game, bookKey, bonusType, boostPct, maxBet }) {
           outcome: o.name, point: o.point, bookDecimal: o.price,
           fairProb: f.fairProb, fairDecimal: f.fairDecimal, sharpBook: sharpTitle,
           gameShort: game.away_team.split(' ').pop() + ' @ ' + game.home_team.split(' ').pop(),
+          deepLink: o.link || null, sid: o.sid || null,
         });
       }
     }

@@ -363,23 +363,35 @@ function topPicks() {
       ...top.map((r, i) => {
         const pos = r.evPct > 0;
         const isFirst = i === 0 && pos;
+        const tpIdx = 'tp_' + i;
+        const open = S.expandedIdx === tpIdx;
         return h('div', { style: {
           background: isFirst ? 'rgba(255,215,0,.06)' : 'rgba(255,255,255,.02)',
           border: isFirst ? '1px solid rgba(255,215,0,.15)' : '1px solid rgba(255,255,255,.04)',
-          borderRadius: '8px', padding: '10px 12px',
+          borderRadius: '8px', overflow: 'hidden',
         } },
-          h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } },
-            h('div', { style: { flex: '1' } },
-              h('div', { style: { display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' } },
-                isFirst ? h('span', { style: { fontSize: '8px', fontWeight: '700', background: 'rgba(255,215,0,.2)', color: '#ffd700', padding: '1px 6px', borderRadius: '3px', letterSpacing: '.5px', textTransform: 'uppercase' } }, '#1 Pick') : null,
-                i > 0 ? h('span', { style: { fontSize: '8px', fontWeight: '600', color: 'var(--fg3)', padding: '1px 4px' } }, '#' + (i+1)) : null,
-                h('span', { style: { fontFamily: 'var(--display)', fontSize: '12px', fontWeight: '600', color: '#fff' } },
-                  r.outcome + (r.point != null ? ' (' + (r.point > 0 ? '+' : '') + r.point + ')' : ''))),
-              h('div', { style: { fontSize: '10px', color: 'var(--fg3)' } },
-                r.gameShort + ' \xb7 ' + r.marketLabel + ' \xb7 ' + amOdds(r.bookDecimal) + ' \xb7 Fair ' + (r.fairProb * 100).toFixed(1) + '%')),
-            h('div', { style: { textAlign: 'right' } },
-              h('div', { cls: 'ev-badge ' + (pos ? 'ev-pos' : 'ev-neg'), style: { fontSize: '12px', fontWeight: '700' } }, (pos ? '+' : '') + r.evPct.toFixed(2) + '%'),
-              h('div', { style: { fontSize: '9px', color: pos ? '#00c853' : '#ff4757', marginTop: '2px' } }, (r.ev >= 0 ? '+' : '') + '$' + r.ev.toFixed(2) + ' EV'))),
+          h('button', { style: { width: '100%', textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit', background: 'none', border: 'none', padding: '10px 12px', color: 'var(--fg)' },
+            onClick: () => set({ expandedIdx: open ? null : tpIdx }) },
+            h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } },
+              h('div', { style: { flex: '1' } },
+                h('div', { style: { display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' } },
+                  isFirst ? h('span', { style: { fontSize: '8px', fontWeight: '700', background: 'rgba(255,215,0,.2)', color: '#ffd700', padding: '1px 6px', borderRadius: '3px', letterSpacing: '.5px', textTransform: 'uppercase' } }, '#1 Pick') : null,
+                  i > 0 ? h('span', { style: { fontSize: '8px', fontWeight: '600', color: 'var(--fg3)', padding: '1px 4px' } }, '#' + (i+1)) : null,
+                  h('span', { style: { fontFamily: 'var(--display)', fontSize: '12px', fontWeight: '600', color: '#fff' } },
+                    r.outcome + (r.point != null ? ' (' + (r.point > 0 ? '+' : '') + r.point + ')' : ''))),
+                h('div', { style: { fontSize: '10px', color: 'var(--fg3)' } },
+                  r.gameShort + ' \xb7 ' + r.marketLabel + ' \xb7 ' + amOdds(r.bookDecimal) + ' \xb7 Fair ' + (r.fairProb * 100).toFixed(1) + '%')),
+              h('div', { style: { textAlign: 'right' } },
+                h('div', { cls: 'ev-badge ' + (pos ? 'ev-pos' : 'ev-neg'), style: { fontSize: '12px', fontWeight: '700' } }, (pos ? '+' : '') + r.evPct.toFixed(2) + '%'),
+                h('div', { style: { fontSize: '9px', color: pos ? '#00c853' : '#ff4757', marginTop: '2px' } }, (r.ev >= 0 ? '+' : '') + '$' + r.ev.toFixed(2) + ' EV')))),
+          open ? h('div', { style: { padding: '0 12px 12px', animation: 'fadeIn .2s' } },
+            h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px', marginBottom: '8px' } },
+              h('div', { cls: 'sbox' }, h('div', { cls: 'sl' }, 'Stake'), h('div', { cls: 'sv' }, '$' + r.stake.toFixed(0))),
+              h('div', { cls: 'sbox' }, h('div', { cls: 'sl' }, 'Fair Prob'), h('div', { cls: 'sv' }, (r.fairProb * 100).toFixed(2) + '%')),
+              h('div', { cls: 'sbox' }, h('div', { cls: 'sl' }, 'EV'), h('div', { cls: 'sv', style: { color: pos ? '#00c853' : '#ff4757' } }, (pos ? '+' : '') + '$' + r.ev.toFixed(2)))),
+            mathBlock(r.math, S.expandedMath === tpIdx, () => set({ expandedMath: S.expandedMath === tpIdx ? null : tpIdx })),
+            r.deepLink ? deepLinkBtn(r.deepLink, S.sportsbook) : null,
+          ) : null,
         );
       })),
   );
