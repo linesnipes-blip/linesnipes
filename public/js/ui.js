@@ -340,9 +340,16 @@ function parlayDeepLinkBtn(legs, bookKey) {
   if (!legs || !legs.length) return null;
   const book = BOOKS.find(b => b.key === bookKey);
   if (!book) return null;
-  // For DK: chain all outcome SIDs into one URL
+  // For DK: extract SID from each leg's deepLink URL (?outcomes=XXXXXXX)
+  // o.sid from Odds API is often null — the SID lives inside the link itself
   if (bookKey === 'draftkings') {
-    const sids = legs.map(l => l.sid).filter(Boolean);
+    const sids = legs.map(l => {
+      // Try l.sid first, fall back to parsing it out of the deepLink URL
+      if (l.sid) return l.sid;
+      if (!l.deepLink) return null;
+      const m = l.deepLink.match(/outcomes=([^&]+)/);
+      return m ? m[1] : null;
+    }).filter(Boolean);
     if (sids.length === legs.length) {
       const href = 'https://sportsbook.draftkings.com/?outcomes=' + sids.join(',');
       return makePlaceBtn(href, book, 'Add Parlay on ' + book.label);
@@ -357,7 +364,8 @@ function parlayDeepLinkBtn(legs, bookKey) {
       if (mMatch && sMatch) return { marketId: mMatch[1], selectionId: sMatch[1] };
       return null;
     }).filter(Boolean);
-    if (pairs.length === legs.length) {
+    // Only render if we got pairs for every leg
+    if (pairs.length > 0 && pairs.length === legs.length) {
       const params = pairs.map((p, i) =>
         'marketId%5B' + i + '%5D=' + p.marketId + '&selectionId%5B' + i + '%5D=' + p.selectionId
       ).join('&');
