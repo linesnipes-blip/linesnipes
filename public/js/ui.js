@@ -342,16 +342,18 @@ function parlayDeepLinkBtn(legs, bookKey) {
   if (!book) return null;
   // For DK: extract SID from each leg's deepLink URL (?outcomes=XXXXXXX)
   // o.sid from Odds API is often null — the SID lives inside the link itself
+  // DK parlay URL format: /?outcomes=SID1,SID2,SID3
   if (bookKey === 'draftkings') {
     const sids = legs.map(l => {
       // Try l.sid first, fall back to parsing it out of the deepLink URL
       if (l.sid) return l.sid;
       if (!l.deepLink) return null;
-      const m = l.deepLink.match(/outcomes=([^&]+)/);
+      const m = l.deepLink.match(/[?&]outcomes=([^&]+)/);
       return m ? m[1] : null;
     }).filter(Boolean);
-    if (sids.length === legs.length) {
-      const href = 'https://sportsbook.draftkings.com/?outcomes=' + sids.join(',');
+    // Build the parlay URL with all SIDs we could extract (need at least 2 legs)
+    if (sids.length >= 2) {
+      const href = 'https://sportsbook.draftkings.com/?outcomes=' + sids.join('%2C');
       return makePlaceBtn(href, book, 'Add Parlay on ' + book.label);
     }
   }
