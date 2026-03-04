@@ -93,7 +93,7 @@ exports.handler = async (event) => {
 
     // 1) Core markets (bulk endpoint, 3 credits)
     const core = await cached('core:' + sportKey, async () => {
-      const url = API + '/sports/' + sportKey + '/odds/?apiKey=' + KEY() + '&regions=us&markets=h2h,spreads,totals&oddsFormat=decimal&bookmakers=' + bookmakers;
+      const url = API + '/sports/' + sportKey + '/odds/?apiKey=' + KEY() + '&regions=us&markets=h2h,spreads,totals&oddsFormat=decimal&bookmakers=' + bookmakers + '&includeLinks=true&includeSids=true';
       const res = await fetch(url);
       if (!res.ok) throw new Error('Core odds ' + res.status);
       return res.json();
@@ -108,7 +108,7 @@ exports.handler = async (event) => {
       const promises = core.map(game =>
         cached('props:' + game.id, async () => {
           try {
-            const url = API + '/sports/' + sportKey + '/events/' + game.id + '/odds?apiKey=' + KEY() + '&regions=us&markets=' + mkts + '&oddsFormat=decimal&bookmakers=' + bookmakers;
+            const url = API + '/sports/' + sportKey + '/events/' + game.id + '/odds?apiKey=' + KEY() + '&regions=us&markets=' + mkts + '&oddsFormat=decimal&bookmakers=' + bookmakers + '&includeLinks=true&includeSids=true';
             const res = await fetch(url);
             if (!res.ok) return null;
             return res.json();

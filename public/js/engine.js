@@ -352,6 +352,7 @@ function extractAllOutcomes(games, bookKey) {
             bookDecimal: o.price, fairProb: f.fairProb, fairDecimal: f.fairDecimal,
             sharpBook: sharpName, edge: (o.price / f.fairDecimal) - 1,
             devigMethod: 'Multiplicative', playerName,
+            deepLink: o.link || null, sid: o.sid || null,
           });
         }
       } else {
@@ -367,6 +368,7 @@ function extractAllOutcomes(games, bookKey) {
             bookDecimal: o.price, fairProb: f.fairProb, fairDecimal: f.fairDecimal,
             sharpBook: sharpName, edge: (o.price / f.fairDecimal) - 1,
             devigMethod: m.key === 'h2h' && sharpOutcomes.length === 2 ? 'Shin' : 'Multiplicative',
+            deepLink: o.link || null, sid: o.sid || null,
           });
         }
       }
