@@ -106,7 +106,7 @@ const S = {
   loading: false, error: '',
   bonusType: 'profit_boost', boostPct: '50', maxBet: '50',
   numLegs: '3', parlayMode: 'standard',
-  minOdds: '', maxOdds: '', sportsbook: 'draftkings',
+  minOdds: '', maxOdds: '', minLegOdds: '', maxLegOdds: '', sportsbook: 'draftkings',
   selectedGame: null, singleResults: null, parlayResults: null,
   expandedIdx: null, expandedMath: null, expandedGroups: {}, excludedTeams: new Set(),
   liveOnly: false,
@@ -479,8 +479,12 @@ function scoreParlays(combos, stake, boostPct, topN) {
   }).sort((a, b) => b.evPct - a.evPct).slice(0, topN);
 }
 
-function findBestParlays({ allOutcomes, numLegs, boostPct, maxBet, parlayMode = 'standard', topN = 20 }) {
+function findBestParlays({ allOutcomes, numLegs, boostPct, maxBet, parlayMode = 'standard', topN = 20, legOddsMin = '', legOddsMax = '' }) {
   const stake = maxBet;
+  // Filter individual legs by per-leg odds range before building combos
+  if (legOddsMin !== '' || legOddsMax !== '') {
+    allOutcomes = allOutcomes.filter(o => passFilter(o.bookDecimal, legOddsMin, legOddsMax));
+  }
   if (parlayMode === 'sgp') {
     const byGame = new Map();
     for (const o of allOutcomes) { if (!byGame.has(o.gameId)) byGame.set(o.gameId, []); byGame.get(o.gameId).push(o); }
@@ -646,7 +650,7 @@ async function fetchOdds() {
       parlayResults = findBestParlays({
         allOutcomes: ao, numLegs: parseInt(S.numLegs) || 3,
         boostPct: parseFloat(S.boostPct) || 0, maxBet: parseFloat(S.maxBet) || 50,
-        parlayMode: S.parlayMode,
+        parlayMode: S.parlayMode, legOddsMin: S.minLegOdds, legOddsMax: S.maxLegOdds,
       });
     }
     set({ odds, parlayResults, loading: false });
@@ -661,7 +665,7 @@ function rebuildParlays() {
   const parlayResults = findBestParlays({
     allOutcomes: ao, numLegs: parseInt(S.numLegs) || 3,
     boostPct: parseFloat(S.boostPct) || 0, maxBet: parseFloat(S.maxBet) || 50,
-    parlayMode: S.parlayMode,
+    parlayMode: S.parlayMode, legOddsMin: S.minLegOdds, legOddsMax: S.maxLegOdds,
   });
   set({ parlayResults });
 }
