@@ -67,6 +67,7 @@ exports.handler = async (event) => {
       cancel_url: `${origin}/#/pricing?checkout=cancel`,
       client_reference_id: user.id,
       metadata: { user_id: user.id, plan },
+      allow_promotion_codes: true,
     };
 
     if (profile?.stripe_customer_id) {
