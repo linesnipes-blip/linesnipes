@@ -14,6 +14,13 @@ function render() {
 function _doRender() {
   _renderTimer = null;
   const root = document.getElementById('root');
+
+  // Save focused input state before re-render
+  const activeEl = document.activeElement;
+  const focusId = activeEl?.id || null;
+  const focusStart = activeEl?.selectionStart ?? null;
+  const focusEnd = activeEl?.selectionEnd ?? null;
+
   let page;
   switch (S.page) {
     case 'landing': page = pgLanding(); break;
@@ -41,6 +48,17 @@ function _doRender() {
   if (pageChanged) {
     window.scrollTo(0, 0);
     _lastPage = S.page;
+  }
+
+  // Restore focus and cursor position after re-render
+  if (focusId) {
+    const el = document.getElementById(focusId);
+    if (el) {
+      el.focus();
+      if (focusStart !== null && el.setSelectionRange) {
+        try { el.setSelectionRange(focusStart, focusEnd); } catch(e) {}
+      }
+    }
   }
 }
 
