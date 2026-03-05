@@ -349,9 +349,16 @@ function betCard(r, idx, compact) {
 }
 
 // ─── DEEP LINK BUTTON ───
+const ONE_CLICK_BOOKS = ['draftkings', 'fanduel'];
 function deepLinkBtn(link, bookKey) {
   const book = BOOKS.find(b => b.key === bookKey);
-  if (!book || !link) return null;
+  if (!book) return null;
+  if (!ONE_CLICK_BOOKS.includes(bookKey)) {
+    return h('div', { style: { marginTop: '8px', padding: '10px 16px', borderRadius: '8px', background: 'rgba(255,255,255,.03)', border: '1px solid rgba(255,255,255,.07)', color: 'var(--fg3)', fontSize: '11px', fontWeight: '600', textAlign: 'center', fontFamily: 'var(--display)' } },
+      '⚠️ One-click bet placement not available for ' + book.label + ' — place manually using the odds above'
+    );
+  }
+  if (!link) return null;
   const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
   let href = link;
   if (isMobile) {
@@ -404,9 +411,12 @@ function parlayDeepLinkBtn(legs, bookKey) {
       return makePlaceBtn(href, book, 'Add Parlay on ' + book.label);
     }
   }
-  // Fallback: link to first leg
-  const firstLink = legs.find(l => l.deepLink)?.deepLink;
-  if (firstLink) return makePlaceBtn(firstLink, book, 'Open on ' + book.label);
+  // Non-supported book
+  if (!ONE_CLICK_BOOKS.includes(bookKey)) {
+    return h('div', { style: { marginTop: '8px', padding: '10px 16px', borderRadius: '8px', background: 'rgba(255,255,255,.03)', border: '1px solid rgba(255,255,255,.07)', color: 'var(--fg3)', fontSize: '11px', fontWeight: '600', textAlign: 'center', fontFamily: 'var(--display)' } },
+      '⚠️ One-click bet placement not available for ' + book.label + ' — place manually using the odds above'
+    );
+  }
   return null;
 }
 
@@ -620,8 +630,8 @@ function pgApp() {
           h('div', {}, h('div', { cls: 'lbl' }, 'Min Odds'), h('input', { type: 'text', value: S.minOdds, placeholder: 'e.g. -200', id: 'inp-minodds', onInput: (e) => { S.minOdds = e.target.value; } })),
           h('div', {}, h('div', { cls: 'lbl' }, 'Max Odds'), h('input', { type: 'text', value: S.maxOdds, placeholder: 'e.g. +500', id: 'inp-maxodds', onInput: (e) => { S.maxOdds = e.target.value; } }))),
         isP ? h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '14px' } },
-          h('div', {}, h('div', { cls: 'lbl' }, 'Min Odds Per Leg'), h('input', { type: 'text', value: S.minLegOdds || '', placeholder: 'e.g. -200', id: 'inp-minlegodds', onInput: (e) => { S.minLegOdds = e.target.value; rebuildParlays(); } })),
-          h('div', {}, h('div', { cls: 'lbl' }, 'Max Odds Per Leg'), h('input', { type: 'text', value: S.maxLegOdds || '', placeholder: 'e.g. +300', id: 'inp-maxlegodds', onInput: (e) => { S.maxLegOdds = e.target.value; rebuildParlays(); } }))        ) : h('div', {}),
+          h('div', {}, h('div', { cls: 'lbl' }, 'Min Odds Per Leg'), h('input', { type: 'text', value: S.minLegOdds || '', placeholder: 'e.g. -200', id: 'inp-minlegodds', onInput: (e) => { S.minLegOdds = e.target.value; rebuildParlays(true); } })),
+          h('div', {}, h('div', { cls: 'lbl' }, 'Max Odds Per Leg'), h('input', { type: 'text', value: S.maxLegOdds || '', placeholder: 'e.g. +300', id: 'inp-maxlegodds', onInput: (e) => { S.maxLegOdds = e.target.value; rebuildParlays(true); } }))        ) : h('div', {}),
         h('div', { style: { display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' } },
           h('button', { style: {
             display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 14px', borderRadius: '20px', cursor: 'pointer',

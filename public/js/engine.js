@@ -657,8 +657,14 @@ async function fetchOdds() {
   } catch (err) { set({ error: err.message, loading: false }); }
 }
 
-function rebuildParlays() {
+let _rebuildTimer = null;
+function rebuildParlays(debounce = false) {
   if (!S.odds || S.bonusType !== 'parlay_boost') return;
+  if (debounce) {
+    clearTimeout(_rebuildTimer);
+    _rebuildTimer = setTimeout(() => rebuildParlays(false), 400);
+    return;
+  }
   const filteredOdds = S.liveOnly ? S.odds.filter(g => new Date(g.commence_time) <= new Date()) : S.odds;
   const ao = extractAllOutcomes(filteredOdds, S.sportsbook)
     .filter(o => !S.excludedTeams.has(o.game));
