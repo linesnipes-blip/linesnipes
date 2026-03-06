@@ -41,6 +41,9 @@ function pgLanding() {
       h('div', { cls: 'htag fade-up' }, '🎯 Sharp Line Analysis'),
       h('h1', { cls: 'fade-up d1', html: '<em>Snipe +EV Bets</em><br>Before They Disappear' }),
       h('p', { cls: 'fade-up d2' }, 'Instantly find positive expected value in every boost, promo, and parlay. Powered by Pinnacle sharp lines and our proprietary composite model. Zero guesswork.'),
+      h('div', { cls: 'fade-up d3', style: { display: 'inline-flex', alignItems: 'center', gap: '8px', marginTop: '16px', padding: '8px 16px', borderRadius: '20px', background: 'rgba(255,255,255,.05)', border: '1px solid rgba(255,255,255,.1)', fontSize: '12px', color: 'var(--fg2)' } },
+        h('span', { style: { color: '#ffd700' } }, '⚠️'),
+        h('span', {}, 'LineSnipes is a ', h('strong', { style: { color: '#fff' } }, 'calculator and analytics tool'), ' — not a sportsbook. We do not accept bets or wagers of any kind.')),
       h('button', { cls: 'hcta fade-up d3', onClick: () => set({ page: 'signup' }) }, '🎯 Start Sniping — Free'),
       h('div', { cls: 'fade-up d4', style: { marginTop: '16px', fontSize: '13px', color: 'var(--fg3)' } }, '10 free searches. No credit card required.'),
     ),
@@ -131,13 +134,18 @@ function pgAuth(mode) {
     h('div', { style: { textAlign: 'center', marginBottom: '24px' } },
       h('div', { style: { display: 'inline-flex', alignItems: 'center', gap: '8px', fontFamily: 'var(--display)', fontSize: '24px', fontWeight: '800', color: '#fff' } },
         h('img', { src: LOGO, alt: 'LineSnipes', style: { height: '36px' } }))),
-    h('h2', {}, isLogin ? 'Welcome back' : 'Create your account'),
-    h('p', { cls: 'sub' }, isLogin ? 'Log in to start sniping.' : '10 free searches. No credit card.'),
+    h('h2', {}, isLogin ? 'Welcome back' : mode === 'reset' ? 'Reset Password' : 'Create your account'),
+    h('p', { cls: 'sub' }, isLogin ? 'Log in to start sniping.' : mode === 'reset' ? 'Enter your email and we\'ll send a reset link.' : '10 free searches. No credit card.'),
     h('label', {}, 'Email'), h('input', { type: 'email', placeholder: 'you@email.com', id: 'ae' }),
-    h('label', {}, 'Password'), h('input', { type: 'password', placeholder: isLogin ? '••••••••' : 'Min 6 characters', id: 'ap' }),
-    h('button', { cls: 'abtn', id: 'abtn' }, isLogin ? 'Log In' : 'Create Account'),
+    mode !== 'reset' ? h('label', {}, 'Password') : null,
+    mode !== 'reset' ? h('input', { type: 'password', placeholder: isLogin ? '••••••••' : 'Min 6 characters', id: 'ap' }) : null,
+    h('button', { cls: 'abtn', id: 'abtn' }, isLogin ? 'Log In' : mode === 'reset' ? 'Send Reset Link' : 'Create Account'),
     h('div', { id: 'aerr' }),
-    h('p', { cls: 'aswitch' }, isLogin ? "Don't have an account? " : 'Already have an account? ',
+    h('div', { id: 'asucc', style: { color: '#00c853', fontSize: '13px', textAlign: 'center', marginTop: '8px' } }),
+    isLogin ? h('p', { style: { textAlign: 'center', marginTop: '10px', fontSize: '12px' } },
+      h('a', { onClick: () => set({ page: 'reset' }), style: { color: 'var(--fg3)', cursor: 'pointer' } }, 'Forgot password?')
+    ) : null,
+    h('p', { cls: 'aswitch' }, isLogin ? "Don't have an account? " : mode === 'reset' ? 'Remember it? ' : 'Already have an account? ',
       h('a', { onClick: () => set({ page: isLogin ? 'signup' : 'login' }) }, isLogin ? 'Sign up' : 'Log in')),
     h('p', { style: { textAlign: 'center', marginTop: '12px' } },
       h('a', { onClick: () => set({ page: 'landing' }), style: { fontSize: '12px', color: 'var(--fg3)' } }, '← Back to home')),
@@ -145,8 +153,20 @@ function pgAuth(mode) {
   setTimeout(() => {
     const btn = document.getElementById('abtn');
     if (btn) btn.onclick = async () => {
-      const em = document.getElementById('ae')?.value, pw = document.getElementById('ap')?.value;
+      const em = document.getElementById('ae')?.value;
+      const pw = document.getElementById('ap')?.value;
       const errEl = document.getElementById('aerr');
+      const succEl = document.getElementById('asucc');
+      // Reset password mode
+      if (mode === 'reset') {
+        if (!em) { errEl.innerHTML = '<div class="aerr">Please enter your email.</div>'; return; }
+        btn.disabled = true; btn.textContent = 'Sending...';
+        const { error } = await sb.auth.resetPasswordForEmail(em, { redirectTo: window.location.origin + '/#/app' });
+        btn.disabled = false; btn.textContent = 'Send Reset Link';
+        if (error) { errEl.innerHTML = '<div class="aerr">' + error.message + '</div>'; }
+        else { if (succEl) succEl.textContent = '✅ Reset link sent — check your email!'; }
+        return;
+      }
       if (!em || !pw) { errEl.innerHTML = '<div class="aerr">Please fill in all fields.</div>'; return; }
       btn.disabled = true; btn.textContent = isLogin ? 'Logging in...' : 'Creating account...';
       const err = isLogin ? await doLogin(em, pw) : await doSignup(em, pw);
@@ -695,7 +715,38 @@ function pgSettings() {
       h('div', { cls: 'scard' },
         h('h3', {}, 'Account'), h('p', { cls: 'desc' }, p.email || S.user?.email || ''),
         h('button', { cls: 'lobtn', onClick: doLogout }, 'Log Out')),
-
+      h('div', { cls: 'scard' },
+        h('h3', {}, 'Feedback'),
+        h('p', { cls: 'desc' }, 'Have a suggestion or found an issue? Let us know.'),
+        h('textarea', { id: 'feedback-msg', placeholder: 'Your message...', style: { width: '100%', minHeight: '80px', background: 'rgba(255,255,255,.05)', border: '1px solid rgba(255,255,255,.1)', borderRadius: '8px', padding: '10px', color: '#fff', fontSize: '13px', fontFamily: 'inherit', resize: 'vertical', marginBottom: '8px' } }),
+        h('button', { cls: 'mbtn', id: 'feedback-btn', style: { borderColor: 'var(--accent)', color: 'var(--accent)' }, onClick: async () => {
+          const msg = document.getElementById('feedback-msg')?.value?.trim();
+          const btn = document.getElementById('feedback-btn');
+          const res = document.getElementById('feedback-res');
+          if (!msg) return;
+          btn.disabled = true; btn.textContent = 'Sending...';
+          try {
+            await emailjs.send('service_79tlztr', 'template_hh2kj3t', {
+              message: msg,
+              user_email: S.user?.email || 'unknown',
+              to_email: 'linesnipes@gmail.com',
+            });
+            if (res) res.textContent = '✅ Feedback sent, thank you!';
+            document.getElementById('feedback-msg').value = '';
+          } catch(e) {
+            if (res) res.textContent = '❌ Failed to send. Try again.';
+          }
+          btn.disabled = false; btn.textContent = 'Send Feedback';
+        } }, 'Send Feedback'),
+        h('div', { id: 'feedback-res', style: { fontSize: '12px', marginTop: '6px', color: 'var(--fg3)' } }),
+      ),
+      h('div', { style: { marginTop: '40px', padding: '16px', borderTop: '1px solid rgba(255,255,255,.06)', fontSize: '11px', color: 'var(--fg3)', lineHeight: '1.7' } },
+        h('p', { style: { fontWeight: '600', marginBottom: '6px', color: 'var(--fg2)' } }, '⚖️ Legal Disclaimer'),
+        h('p', {}, 'LineSnipes is an independent odds calculator and analytics tool. It is not a sportsbook, betting exchange, or gambling operator of any kind. LineSnipes does not accept, place, or facilitate wagers or bets.'),
+        h('p', { style: { marginTop: '6px' } }, 'All information provided by LineSnipes is for educational and informational purposes only. Expected value calculations, odds comparisons, and recommendations are mathematical estimates and do not guarantee any outcome. Sports betting involves substantial risk of financial loss. Past results are not indicative of future performance.'),
+        h('p', { style: { marginTop: '6px' } }, 'By using LineSnipes you acknowledge that you are of legal gambling age in your jurisdiction, that sports betting may be illegal in your area, and that you are solely responsible for any betting decisions you make. LineSnipes assumes no liability for financial losses incurred as a result of using this tool.'),
+        h('p', { style: { marginTop: '6px' } }, 'Please gamble responsibly. If you or someone you know has a gambling problem, call 1-800-GAMBLER.'),
+      ),
     ),
   );
 }

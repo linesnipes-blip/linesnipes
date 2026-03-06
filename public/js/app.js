@@ -26,6 +26,7 @@ function _doRender() {
     case 'landing': page = pgLanding(); break;
     case 'login': page = pgAuth('login'); break;
     case 'signup': page = pgAuth('signup'); break;
+    case 'reset': page = pgAuth('reset'); break;
     case 'app': page = pgApp(); break;
     case 'faq': page = pgFaq(); break;
     case 'settings': page = pgSettings(); break;
