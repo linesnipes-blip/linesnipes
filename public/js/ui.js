@@ -650,9 +650,9 @@ function pgApp() {
             h('input', { type: 'number', value: S.maxBet, placeholder: '50', id: 'inp-maxbet', onInput: (e) => { S.maxBet = e.target.value; } })),
           isP ? h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' } },
             h('div', {}, h('div', { cls: 'lbl' }, 'Min Legs'),
-              h('input', { type: 'number', value: S.numLegs, placeholder: '2', min: '2', max: '10', id: 'inp-legs', onInput: (e) => { S.numLegs = e.target.value; rebuildParlays(true); } })),
+              h('input', { type: 'number', value: S.numLegs, placeholder: '2', min: '2', max: '10', id: 'inp-legs', onInput: (e) => { set({ numLegs: e.target.value }); rebuildParlays(true); } })),
             h('div', {}, h('div', { cls: 'lbl' }, 'Max Legs'),
-              h('input', { type: 'number', value: S.maxNumLegs, placeholder: 'e.g. 4', min: '2', max: '10', id: 'inp-maxlegs', onInput: (e) => { S.maxNumLegs = e.target.value; rebuildParlays(true); } }))
+              h('input', { type: 'number', value: S.maxNumLegs, placeholder: 'e.g. 4', min: '2', max: '10', id: 'inp-maxlegs', onInput: (e) => { set({ maxNumLegs: e.target.value }); rebuildParlays(true); } }))
           ) : null),
         h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '14px' } },
           h('div', {}, h('div', { cls: 'lbl' }, 'Min Odds (Single Bets)'), h('input', { type: 'text', value: S.minOdds, placeholder: 'e.g. -200', id: 'inp-minodds', onInput: (e) => { S.minOdds = e.target.value; } })),

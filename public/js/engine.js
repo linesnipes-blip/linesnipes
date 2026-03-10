@@ -105,7 +105,7 @@ const S = {
   sports: null, sport: null, odds: null,
   loading: false, error: '',
   bonusType: 'profit_boost', boostPct: '50', maxBet: '50',
-  numLegs: '2', maxNumLegs: '', parlayMode: 'standard',
+  numLegs: '2', maxNumLegs: '2', parlayMode: 'standard',
   minOdds: '', maxOdds: '', minLegOdds: '', maxLegOdds: '', sportsbook: 'draftkings',
   selectedGame: null, singleResults: null, parlayResults: null,
   expandedIdx: null, expandedMath: null, expandedGroups: {}, excludedTeams: new Set(),
