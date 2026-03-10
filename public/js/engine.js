@@ -550,7 +550,7 @@ function findBestParlays({ allOutcomes, numLegs, maxNumLegs = '', boostPct, maxB
     const key = o.gameId + '|' + o.market + '|' + o.outcome + (o.playerName ? '|' + o.playerName : '');
     if (!seen.has(key) || o.edge > seen.get(key).edge) seen.set(key, o);
   }
-  const pool = Array.from(seen.values()).sort((a, b) => b.edge - a.edge).slice(0, 40);
+  const pool = Array.from(seen.values()); // No early cap — byEdge+byOdds split below handles sizing
 
   // numLegs is min legs, maxNumLegs is max legs (defaults to minLegs + 2 if not set).
   const maxLegs = maxNumLegs ? parseInt(maxNumLegs) : numLegs + 2;
