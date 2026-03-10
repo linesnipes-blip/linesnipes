@@ -486,7 +486,7 @@ function scoreParlays(combos, stake, boostPct, topN, parlayMinOdds = '', parlayM
   .sort((a, b) => b.evPct - a.evPct).slice(0, topN);
 }
 
-function findBestParlays({ allOutcomes, numLegs, maxNumLegs = '', boostPct, maxBet, parlayMode = 'standard', topN = 20, legOddsMin = '', legOddsMax = '', parlayMinOdds = '', parlayMaxOdds = '' }) {
+function findBestParlays({ allOutcomes, numLegs, maxNumLegs = '', boostPct, maxBet, parlayMode = 'standard', topN = 60, legOddsMin = '', legOddsMax = '', parlayMinOdds = '', parlayMaxOdds = '' }) {
   const stake = maxBet;
   // Filter individual legs by per-leg odds range before building combos
   if (legOddsMin !== '' || legOddsMax !== '') {
@@ -557,7 +557,7 @@ function findBestParlays({ allOutcomes, numLegs, maxNumLegs = '', boostPct, maxB
   const allCombos = [];
   for (let n = numLegs; n <= maxLegs; n++) {
     if (pool.length < n) continue;
-    const top = pool.slice(0, Math.min(25, pool.length));
+    const top = pool; // No cap — all outcomes eligible, including long-odds underdogs
     (function c(s, cur) {
       if (cur.length === n) { allCombos.push([...cur]); return; }
       for (let i = s; i < top.length; i++) {
