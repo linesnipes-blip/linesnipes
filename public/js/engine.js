@@ -675,13 +675,14 @@ async function fetchOdds() {
     if (data.usage) set({ profile: { ...S.profile, fetches_used: data.usage.used } });
     if (!odds.length) { set({ error: 'No games found for this sport right now.', loading: false }); return; }
     set({ odds, loading: false });
+    console.log('[LS] fetchOdds done. bonusType:', S.bonusType, 'numLegs:', S.numLegs, 'maxNumLegs:', S.maxNumLegs, 'minOdds:', S.minOdds, 'oddsCount:', odds.length);
     if (S.bonusType === 'parlay_boost') setTimeout(() => rebuildParlays(), 0);
   } catch (err) { set({ error: err.message, loading: false }); }
 }
 
 let _rebuildTimer = null;
 function rebuildParlays(debounce = false) {
-  if (!S.odds || S.bonusType !== 'parlay_boost') return;
+  if (!S.odds || S.bonusType !== 'parlay_boost') { console.log('[LS] rebuildParlays SKIPPED — odds:', !!S.odds, 'bonusType:', S.bonusType); return; }
   if (debounce) {
     clearTimeout(_rebuildTimer);
     _rebuildTimer = setTimeout(() => rebuildParlays(false), 400);
@@ -690,12 +691,14 @@ function rebuildParlays(debounce = false) {
   const filteredOdds = S.liveOnly ? S.odds.filter(g => new Date(g.commence_time) <= new Date()) : S.odds;
   const ao = extractAllOutcomes(filteredOdds, S.sportsbook)
     .filter(o => !S.excludedTeams.has(o.game));
+  console.log('[LS] rebuildParlays — sportsbook:', S.sportsbook, 'numLegs:', S.numLegs, 'maxNumLegs:', S.maxNumLegs, 'minOdds:', S.minOdds, 'outcomes:', ao.length, 'parlayMode:', S.parlayMode);
   const parlayResults = findBestParlays({
     allOutcomes: ao, numLegs: parseInt(S.numLegs) || 2, maxNumLegs: S.maxNumLegs,
     boostPct: parseFloat(S.boostPct) || 0, maxBet: parseFloat(S.maxBet) || 50,
     parlayMode: S.parlayMode, legOddsMin: S.minLegOdds, legOddsMax: S.maxLegOdds,
     parlayMinOdds: S.minOdds, parlayMaxOdds: S.maxOdds,
   });
+  console.log('[LS] rebuildParlays — results:', parlayResults.length);
   set({ parlayResults });
 }
 
