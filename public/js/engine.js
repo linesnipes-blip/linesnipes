@@ -496,7 +496,8 @@ function findBestParlays({ allOutcomes, numLegs, maxNumLegs = '', boostPct, maxB
     const byGame = new Map();
     for (const o of allOutcomes) { if (!byGame.has(o.gameId)) byGame.set(o.gameId, []); byGame.get(o.gameId).push(o); }
     const all = [];
-    for (const [, go] of byGame) {
+    console.log('[LS SGP] games:', byGame.size, 'total outcomes:', allOutcomes.length);
+    for (const [gid, go] of byGame) {
       const bm = new Map();
       for (const o of go) { if (!bm.has(o.market)) bm.set(o.market, []); bm.get(o.market).push(o); }
       const best = [];
@@ -504,6 +505,7 @@ function findBestParlays({ allOutcomes, numLegs, maxNumLegs = '', boostPct, maxB
       if (best.length < numLegs) continue;
       best.sort((a, b) => b.edge - a.edge);
       const pool = best.slice(0, 8);
+      console.log('[LS SGP] game', gid, 'markets:', best.length, 'pool odds:', pool.map(p => amOdds(p.bookDecimal)).join(', '));
       (function c(s, cur) {
         if (cur.length === numLegs) { all.push([...cur]); return; }
         for (let i = s; i < pool.length; i++) {

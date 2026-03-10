@@ -655,8 +655,8 @@ function pgApp() {
               h('input', { type: 'number', value: S.maxNumLegs, placeholder: 'e.g. 4', min: '2', max: '10', id: 'inp-maxlegs', onInput: (e) => { set({ maxNumLegs: e.target.value }); rebuildParlays(true); } }))
           ) : null),
         h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '14px' } },
-          h('div', {}, h('div', { cls: 'lbl' }, 'Min Odds (Single Bets)'), h('input', { type: 'text', value: S.minOdds, placeholder: 'e.g. -200', id: 'inp-minodds', onInput: (e) => { S.minOdds = e.target.value; } })),
-          h('div', {}, h('div', { cls: 'lbl' }, 'Max Odds (Single Bets)'), h('input', { type: 'text', value: S.maxOdds, placeholder: 'e.g. +500', id: 'inp-maxodds', onInput: (e) => { S.maxOdds = e.target.value; } }))),
+          h('div', {}, h('div', { cls: 'lbl' }, 'Min Odds'), h('input', { type: 'text', value: S.minOdds, placeholder: 'e.g. +1000', id: 'inp-minodds', onInput: (e) => { set({ minOdds: e.target.value }); if (isP) rebuildParlays(true); } })),
+          h('div', {}, h('div', { cls: 'lbl' }, 'Max Odds'), h('input', { type: 'text', value: S.maxOdds, placeholder: 'e.g. +5000', id: 'inp-maxodds', onInput: (e) => { set({ maxOdds: e.target.value }); if (isP) rebuildParlays(true); } }))),
         isP ? h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '14px' } },
           h('div', {}, h('div', { cls: 'lbl' }, 'Min Odds Per Leg'), h('input', { type: 'text', value: S.minLegOdds || '', placeholder: 'e.g. -200', id: 'inp-minlegodds', onInput: (e) => { S.minLegOdds = e.target.value; rebuildParlays(true); } })),
           h('div', {}, h('div', { cls: 'lbl' }, 'Max Odds Per Leg'), h('input', { type: 'text', value: S.maxLegOdds || '', placeholder: 'e.g. +300', id: 'inp-maxlegodds', onInput: (e) => { S.maxLegOdds = e.target.value; rebuildParlays(true); } }))        ) : h('div', {}),
