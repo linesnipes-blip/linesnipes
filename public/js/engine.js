@@ -506,7 +506,7 @@ function findBestParlays({ allOutcomes, numLegs, maxNumLegs = '', boostPct, maxB
       const pool = best.slice(0, 8);
       (function c(s, cur) { if (cur.length === numLegs) { all.push([...cur]); return; } for (let i = s; i < pool.length; i++) { if (cur.some(x => x.market === pool[i].market)) continue; cur.push(pool[i]); c(i + 1, cur); cur.pop(); } })(0, []);
     }
-    return scoreParlays(all, stake, boostPct, topN);
+    return scoreParlays(all, stake, boostPct, topN, parlayMinOdds, parlayMaxOdds);
   }
   if (parlayMode === 'sgpx') {
     const byGame = new Map();
@@ -536,7 +536,7 @@ function findBestParlays({ allOutcomes, numLegs, maxNumLegs = '', boostPct, maxB
         for (const sg of sgpC.slice(0, 10)) for (const cr of crC.slice(0, 10)) all.push([...sg, ...cr]);
       }
     }
-    return scoreParlays(all, stake, boostPct, topN);
+    return scoreParlays(all, stake, boostPct, topN, parlayMinOdds, parlayMaxOdds);
   }
   // Standard
   // Pool = all outcomes, but deduplicated so only the best-edge outcome per
