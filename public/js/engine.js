@@ -105,7 +105,7 @@ const S = {
   sports: null, sport: null, odds: null,
   loading: false, error: '',
   bonusType: 'profit_boost', boostPct: '50', maxBet: '50',
-  numLegs: '3', parlayMode: 'standard',
+  numLegs: '2', maxNumLegs: '', parlayMode: 'standard',
   minOdds: '', maxOdds: '', minLegOdds: '', maxLegOdds: '', sportsbook: 'draftkings',
   selectedGame: null, singleResults: null, parlayResults: null,
   expandedIdx: null, expandedMath: null, expandedGroups: {}, excludedTeams: new Set(),
@@ -479,7 +479,7 @@ function scoreParlays(combos, stake, boostPct, topN) {
   }).sort((a, b) => b.evPct - a.evPct).slice(0, topN);
 }
 
-function findBestParlays({ allOutcomes, numLegs, boostPct, maxBet, parlayMode = 'standard', topN = 20, legOddsMin = '', legOddsMax = '', parlayMinOdds = '', parlayMaxOdds = '' }) {
+function findBestParlays({ allOutcomes, numLegs, maxNumLegs = '', boostPct, maxBet, parlayMode = 'standard', topN = 20, legOddsMin = '', legOddsMax = '', parlayMinOdds = '', parlayMaxOdds = '' }) {
   const stake = maxBet;
   // Filter individual legs by per-leg odds range before building combos
   if (legOddsMin !== '' || legOddsMax !== '') {
@@ -542,8 +542,8 @@ function findBestParlays({ allOutcomes, numLegs, boostPct, maxBet, parlayMode = 
   // Sort by edge but keep ALL outcomes — no cap — so underdogs and long-odds legs are included.
   const pool = Array.from(byGameMarket.values()).sort((a, b) => b.edge - a.edge);
 
-  // numLegs is a minimum — try numLegs, numLegs+1, numLegs+2 and return best EV across all sizes.
-  const maxLegs = numLegs + 2;
+  // numLegs is min legs, maxNumLegs is max legs (defaults to minLegs + 2 if not set).
+  const maxLegs = maxNumLegs ? parseInt(maxNumLegs) : numLegs + 2;
   const allCombos = [];
   for (let n = numLegs; n <= maxLegs; n++) {
     if (pool.length < n) continue;
@@ -676,7 +676,7 @@ async function fetchOdds() {
       const filteredOdds = S.liveOnly ? odds.filter(g => new Date(g.commence_time) <= new Date()) : odds;
       const ao = extractAllOutcomes(filteredOdds, S.sportsbook).filter(o => !S.excludedTeams.has(o.game));
       parlayResults = findBestParlays({
-        allOutcomes: ao, numLegs: parseInt(S.numLegs) || 3,
+        allOutcomes: ao, numLegs: parseInt(S.numLegs) || 2, maxNumLegs: S.maxNumLegs,
         boostPct: parseFloat(S.boostPct) || 0, maxBet: parseFloat(S.maxBet) || 50,
         parlayMode: S.parlayMode, legOddsMin: S.minLegOdds, legOddsMax: S.maxLegOdds,
         parlayMinOdds: S.minOdds, parlayMaxOdds: S.maxOdds,
@@ -698,7 +698,7 @@ function rebuildParlays(debounce = false) {
   const ao = extractAllOutcomes(filteredOdds, S.sportsbook)
     .filter(o => !S.excludedTeams.has(o.game));
   const parlayResults = findBestParlays({
-    allOutcomes: ao, numLegs: parseInt(S.numLegs) || 3,
+    allOutcomes: ao, numLegs: parseInt(S.numLegs) || 2, maxNumLegs: S.maxNumLegs,
     boostPct: parseFloat(S.boostPct) || 0, maxBet: parseFloat(S.maxBet) || 50,
     parlayMode: S.parlayMode, legOddsMin: S.minLegOdds, legOddsMax: S.maxLegOdds,
     parlayMinOdds: S.minOdds, parlayMaxOdds: S.maxOdds,
