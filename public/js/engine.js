@@ -449,7 +449,8 @@ function extractAllOutcomes(games, bookKey) {
   return out.sort((a, b) => b.edge - a.edge);
 }
 
-function scoreParlays(combos, stake, boostPct, topN) {
+function scoreParlays(combos, stake, boostPct, topN, parlayMinOdds = '', parlayMaxOdds = '') {
+  const mn = amToDec(parlayMinOdds), mx = amToDec(parlayMaxOdds);
   return combos.map(legs => {
     const cfp = legs.reduce((p, l) => p * l.fairProb, 1);
     const pd = legs.reduce((d, l) => d * l.bookDecimal, 1);
@@ -476,7 +477,13 @@ function scoreParlays(combos, stake, boostPct, topN) {
       `EV% = ${evPct.toFixed(2)}%`,
     ];
     return { legs, combinedFairProb: cfp, parlayDecimal: pd, boostedDecimal: bd, boostedPayout: bpay, ev, evPct, avgLegEV, stake, math, uniqueGames: ug };
-  }).sort((a, b) => b.evPct - a.evPct).slice(0, topN);
+  })
+  .filter(p => {
+    if (mn != null && p.parlayDecimal < mn) return false;
+    if (mx != null && p.parlayDecimal > mx) return false;
+    return true;
+  })
+  .sort((a, b) => b.evPct - a.evPct).slice(0, topN);
 }
 
 function findBestParlays({ allOutcomes, numLegs, maxNumLegs = '', boostPct, maxBet, parlayMode = 'standard', topN = 20, legOddsMin = '', legOddsMax = '', parlayMinOdds = '', parlayMaxOdds = '' }) {
@@ -563,14 +570,7 @@ function findBestParlays({ allOutcomes, numLegs, maxNumLegs = '', boostPct, maxB
   }
 
   // Score all combos, filter by combined odds target, return top N by EV%
-  const scored = scoreParlays(allCombos, stake, boostPct, topN * 10);
-  const mn = amToDec(parlayMinOdds), mx = amToDec(parlayMaxOdds);
-  const filtered = scored.filter(p => {
-    if (mn != null && p.parlayDecimal < mn) return false;
-    if (mx != null && p.parlayDecimal > mx) return false;
-    return true;
-  });
-  return filtered.slice(0, topN);
+  return scoreParlays(allCombos, stake, boostPct, topN, parlayMinOdds, parlayMaxOdds);
 }
 
 function analyzeGame({ game, bookKey, bonusType, boostPct, maxBet }) {
