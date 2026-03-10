@@ -504,7 +504,21 @@ function findBestParlays({ allOutcomes, numLegs, maxNumLegs = '', boostPct, maxB
       if (best.length < numLegs) continue;
       best.sort((a, b) => b.edge - a.edge);
       const pool = best.slice(0, 8);
-      (function c(s, cur) { if (cur.length === numLegs) { all.push([...cur]); return; } for (let i = s; i < pool.length; i++) { if (cur.some(x => x.market === pool[i].market)) continue; cur.push(pool[i]); c(i + 1, cur); cur.pop(); } })(0, []);
+      (function c(s, cur) {
+        if (cur.length === numLegs) { all.push([...cur]); return; }
+        for (let i = s; i < pool.length; i++) {
+          const leg = pool[i];
+          if (cur.some(x => x.market === leg.market)) continue;
+          // Books don't allow ML + spread for the same team in SGP
+          const legIsML = leg.market === 'h2h';
+          const legIsSpread = leg.market === 'spreads';
+          if ((legIsML || legIsSpread) && cur.some(x => {
+            const xIsML = x.market === 'h2h'; const xIsSpread = x.market === 'spreads';
+            return (xIsML || xIsSpread) && x.outcome === leg.outcome;
+          })) continue;
+          cur.push(leg); c(i + 1, cur); cur.pop();
+        }
+      })(0, []);
     }
     return scoreParlays(all, stake, boostPct, topN, parlayMinOdds, parlayMaxOdds);
   }
@@ -530,7 +544,21 @@ function findBestParlays({ allOutcomes, numLegs, maxNumLegs = '', boostPct, maxB
         const cc = numLegs - sc;
         if (cc < 1 || cc > cross.length) continue;
         const sgpC = [];
-        (function cs(s, c) { if (c.length === sc) { sgpC.push([...c]); return; } for (let i = s; i < sgpPool.length; i++) { if (c.some(x => x.market === sgpPool[i].market)) continue; c.push(sgpPool[i]); cs(i + 1, c); c.pop(); } })(0, []);
+        (function cs(s, c) {
+          if (c.length === sc) { sgpC.push([...c]); return; }
+          for (let i = s; i < sgpPool.length; i++) {
+            const leg = sgpPool[i];
+            if (c.some(x => x.market === leg.market)) continue;
+            // Books don't allow ML + spread for the same team in SGP
+            const legIsML = leg.market === 'h2h';
+            const legIsSpread = leg.market === 'spreads';
+            if ((legIsML || legIsSpread) && c.some(x => {
+              const xIsML = x.market === 'h2h'; const xIsSpread = x.market === 'spreads';
+              return (xIsML || xIsSpread) && x.outcome === leg.outcome;
+            })) continue;
+            c.push(leg); cs(i + 1, c); c.pop();
+          }
+        })(0, []);
         const crC = [];
         (function cx(s, c) { if (c.length === cc) { crC.push([...c]); return; } for (let i = s; i < cross.length; i++) { if (c.some(x => x.gameId === cross[i].gameId)) continue; c.push(cross[i]); cx(i + 1, c); c.pop(); } })(0, []);
         for (const sg of sgpC.slice(0, 10)) for (const cr of crC.slice(0, 10)) all.push([...sg, ...cr]);
