@@ -532,29 +532,32 @@ function findBestParlays({ allOutcomes, numLegs, maxNumLegs = '', boostPct, maxB
     return scoreParlays(all, stake, boostPct, topN);
   }
   // Standard
-  // Pool = one outcome per game+market+player combo (best edge wins ties).
-  // This prevents both sides of the same market appearing in one parlay leg.
-  const byGameMarket = new Map();
+  // Pool = all outcomes, but deduplicated so only the best-edge outcome per
+  // game+market+side is kept (prevents identical duplicates).
+  // The collision check during combo building uses gameId+market so you CAN
+  // use Game A spread AND Game A total in the same parlay, but NOT both sides
+  // of the same market (e.g. Over AND Under) in the same parlay.
+  const seen = new Map();
   for (const o of allOutcomes) {
-    const key = o.gameId + '|' + o.market + (o.playerName ? '|' + o.playerName : '');
-    if (!byGameMarket.has(key) || o.edge > byGameMarket.get(key).edge) byGameMarket.set(key, o);
+    // Key: game + market + outcome name + player (unique per side)
+    const key = o.gameId + '|' + o.market + '|' + o.outcome + (o.playerName ? '|' + o.playerName : '');
+    if (!seen.has(key) || o.edge > seen.get(key).edge) seen.set(key, o);
   }
-  // Sort by edge but keep ALL outcomes — no cap — so underdogs and long-odds legs are included.
-  const pool = Array.from(byGameMarket.values()).sort((a, b) => b.edge - a.edge);
+  const pool = Array.from(seen.values()).sort((a, b) => b.edge - a.edge).slice(0, 40);
 
   // numLegs is min legs, maxNumLegs is max legs (defaults to minLegs + 2 if not set).
   const maxLegs = maxNumLegs ? parseInt(maxNumLegs) : numLegs + 2;
   const allCombos = [];
   for (let n = numLegs; n <= maxLegs; n++) {
     if (pool.length < n) continue;
-    // Use full pool so long-odds underdogs are reachable.
-    // Cap at 20 to prevent combo explosion on large pools.
-    const top = pool.slice(0, Math.min(20, pool.length));
+    const top = pool.slice(0, Math.min(25, pool.length));
     (function c(s, cur) {
       if (cur.length === n) { allCombos.push([...cur]); return; }
       for (let i = s; i < top.length; i++) {
-        if (cur.some(x => x.gameId === top[i].gameId)) continue;
-        cur.push(top[i]); c(i + 1, cur); cur.pop();
+        const leg = top[i];
+        // Block: same game+market already used (prevents Over+Under of same market)
+        if (cur.some(x => x.gameId === leg.gameId && x.market === leg.market && (!leg.playerName || x.playerName === leg.playerName))) continue;
+        cur.push(leg); c(i + 1, cur); cur.pop();
       }
     })(0, []);
   }
