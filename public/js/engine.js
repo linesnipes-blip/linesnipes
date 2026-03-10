@@ -479,7 +479,7 @@ function scoreParlays(combos, stake, boostPct, topN) {
   }).sort((a, b) => b.evPct - a.evPct).slice(0, topN);
 }
 
-function findBestParlays({ allOutcomes, numLegs, boostPct, maxBet, parlayMode = 'standard', topN = 20, legOddsMin = '', legOddsMax = '' }) {
+function findBestParlays({ allOutcomes, numLegs, boostPct, maxBet, parlayMode = 'standard', topN = 20, legOddsMin = '', legOddsMax = '', parlayMinOdds = '', parlayMaxOdds = '' }) {
   const stake = maxBet;
   // Filter individual legs by per-leg odds range before building combos
   if (legOddsMin !== '' || legOddsMax !== '') {
@@ -542,8 +542,8 @@ function findBestParlays({ allOutcomes, numLegs, boostPct, maxBet, parlayMode = 
   // If a minimum combined odds target is set, supplement the pool with
   // the best-edge outcome per game that has the longest odds (to help reach the target).
   let pool = unc.slice(0, 12);
-  if (legOddsMin !== '') {
-    // Also grab the top outcomes regardless of edge, sorted by bookDecimal desc (longest odds first)
+  if (legOddsMin !== '' || parlayMinOdds !== '') {
+    // Supplement pool with longest-odds outcomes per game to help reach combined odds target
     const byOdds = [...allOutcomes].sort((a, b) => b.bookDecimal - a.bookDecimal);
     const seenGames = new Set(pool.map(o => o.gameId));
     for (const o of byOdds) {
@@ -553,7 +553,15 @@ function findBestParlays({ allOutcomes, numLegs, boostPct, maxBet, parlayMode = 
   }
   const combos = [];
   (function c(s, cur) { if (cur.length === numLegs) { combos.push([...cur]); return; } for (let i = s; i < pool.length; i++) { if (cur.some(x => x.gameId === pool[i].gameId)) continue; cur.push(pool[i]); c(i + 1, cur); cur.pop(); } })(0, []);
-  return scoreParlays(combos, stake, boostPct, topN);
+  // Filter scored parlays by combined odds target before returning
+  const scored = scoreParlays(combos, stake, boostPct, topN * 5);
+  const mn = amToDec(parlayMinOdds), mx = amToDec(parlayMaxOdds);
+  const filtered = scored.filter(p => {
+    if (mn != null && p.parlayDecimal < mn) return false;
+    if (mx != null && p.parlayDecimal > mx) return false;
+    return true;
+  });
+  return filtered.slice(0, topN);
 }
 
 function analyzeGame({ game, bookKey, bonusType, boostPct, maxBet }) {
@@ -665,6 +673,7 @@ async function fetchOdds() {
         allOutcomes: ao, numLegs: parseInt(S.numLegs) || 3,
         boostPct: parseFloat(S.boostPct) || 0, maxBet: parseFloat(S.maxBet) || 50,
         parlayMode: S.parlayMode, legOddsMin: S.minLegOdds, legOddsMax: S.maxLegOdds,
+        parlayMinOdds: S.minOdds, parlayMaxOdds: S.maxOdds,
       });
     }
     set({ odds, parlayResults, loading: false });
@@ -686,6 +695,7 @@ function rebuildParlays(debounce = false) {
     allOutcomes: ao, numLegs: parseInt(S.numLegs) || 3,
     boostPct: parseFloat(S.boostPct) || 0, maxBet: parseFloat(S.maxBet) || 50,
     parlayMode: S.parlayMode, legOddsMin: S.minLegOdds, legOddsMax: S.maxLegOdds,
+    parlayMinOdds: S.minOdds, parlayMaxOdds: S.maxOdds,
   });
   set({ parlayResults });
 }
