@@ -496,27 +496,35 @@ function findBestParlays({ allOutcomes, numLegs, maxNumLegs = '', boostPct, maxB
     const byGame = new Map();
     for (const o of allOutcomes) { if (!byGame.has(o.gameId)) byGame.set(o.gameId, []); byGame.get(o.gameId).push(o); }
     const all = [];
-    console.log('[LS SGP] games:', byGame.size, 'total outcomes:', allOutcomes.length);
-    for (const [gid, go] of byGame) {
-      const bm = new Map();
-      for (const o of go) { if (!bm.has(o.market)) bm.set(o.market, []); bm.get(o.market).push(o); }
-      const best = [];
-      for (const [, outs] of bm) { outs.sort((a, b) => b.edge - a.edge); best.push(outs[0]); }
-      if (best.length < numLegs) continue;
-      best.sort((a, b) => b.edge - a.edge);
-      const pool = best.slice(0, 8);
-      console.log('[LS SGP] game', gid, 'markets:', best.length, 'pool odds:', pool.map(p => amOdds(p.bookDecimal)).join(', '));
+    for (const [, go] of byGame) {
+      // Keep best outcome per market+side slot (both favorite AND underdog, Over AND Under, all props)
+      const slotMap = new Map();
+      for (const o of go) {
+        const slot = o.market + '|' + (o.playerName || '') + '|' + o.outcome;
+        if (!slotMap.has(slot) || o.edge > slotMap.get(slot).edge) slotMap.set(slot, o);
+      }
+      const allSlotsSGP = Array.from(slotMap.values());
+      // Cap per game: top 30 by edge + top 20 by book odds to include underdogs/props
+      const byEdgeSGP = [...allSlotsSGP].sort((a, b) => b.edge - a.edge).slice(0, 30);
+      const byOddsSGP = [...allSlotsSGP].sort((a, b) => b.bookDecimal - a.bookDecimal).slice(0, 20);
+      const poolMap = new Map();
+      for (const o of [...byEdgeSGP, ...byOddsSGP]) poolMap.set(o.market + '|' + (o.playerName || '') + '|' + o.outcome, o);
+      const pool = Array.from(poolMap.values());
+      // Count distinct markets — need at least numLegs distinct markets
+      const distinctMarkets = new Set(pool.map(o => o.market + '|' + (o.playerName || ''))).size;
+      if (distinctMarkets < numLegs) continue;
       (function c(s, cur) {
         if (cur.length === numLegs) { all.push([...cur]); return; }
         for (let i = s; i < pool.length; i++) {
           const leg = pool[i];
-          if (cur.some(x => x.market === leg.market)) continue;
+          const legMarketKey = leg.market + '|' + (leg.playerName || '');
+          // No duplicate market+player in same SGP
+          if (cur.some(x => (x.market + '|' + (x.playerName || '')) === legMarketKey)) continue;
           // Books don't allow ML + spread for the same team in SGP
           const legIsML = leg.market === 'h2h';
           const legIsSpread = leg.market === 'spreads';
           if ((legIsML || legIsSpread) && cur.some(x => {
-            const xIsML = x.market === 'h2h'; const xIsSpread = x.market === 'spreads';
-            return (xIsML || xIsSpread) && x.outcome === leg.outcome;
+            return (x.market === 'h2h' || x.market === 'spreads') && x.outcome === leg.outcome;
           })) continue;
           cur.push(leg); c(i + 1, cur); cur.pop();
         }
@@ -529,11 +537,21 @@ function findBestParlays({ allOutcomes, numLegs, maxNumLegs = '', boostPct, maxB
     for (const o of allOutcomes) { if (!byGame.has(o.gameId)) byGame.set(o.gameId, []); byGame.get(o.gameId).push(o); }
     const gamePools = new Map();
     for (const [gid, go] of byGame) {
-      const bm = new Map();
-      for (const o of go) { if (!bm.has(o.market)) bm.set(o.market, []); bm.get(o.market).push(o); }
-      const best = [];
-      for (const [, outs] of bm) { outs.sort((a, b) => b.edge - a.edge); best.push(outs[0]); }
-      if (best.length >= 2) gamePools.set(gid, best.sort((a, b) => b.edge - a.edge).slice(0, 6));
+      // Keep best per market+side slot (both sides of every market + all props)
+      const slotMap = new Map();
+      for (const o of go) {
+        const slot = o.market + '|' + (o.playerName || '') + '|' + o.outcome;
+        if (!slotMap.has(slot) || o.edge > slotMap.get(slot).edge) slotMap.set(slot, o);
+      }
+      const allSlots = Array.from(slotMap.values());
+      const distinctMarkets = new Set(allSlots.map(o => o.market + '|' + (o.playerName || ''))).size;
+      // Cap per game: top 30 by edge + top 20 by odds
+      const byEdgeSGPX = [...allSlots].sort((a, b) => b.edge - a.edge).slice(0, 30);
+      const byOddsSGPX = [...allSlots].sort((a, b) => b.bookDecimal - a.bookDecimal).slice(0, 20);
+      const sgpxMap = new Map();
+      for (const o of [...byEdgeSGPX, ...byOddsSGPX]) sgpxMap.set(o.market + '|' + (o.playerName || '') + '|' + o.outcome, o);
+      const cappedSlots = Array.from(sgpxMap.values());
+      if (distinctMarkets >= 2) gamePools.set(gid, cappedSlots);
     }
     const bpg = new Map();
     for (const o of allOutcomes) { if (!bpg.has(o.gameId) || o.edge > bpg.get(o.gameId).edge) bpg.set(o.gameId, o); }
@@ -550,13 +568,11 @@ function findBestParlays({ allOutcomes, numLegs, maxNumLegs = '', boostPct, maxB
           if (c.length === sc) { sgpC.push([...c]); return; }
           for (let i = s; i < sgpPool.length; i++) {
             const leg = sgpPool[i];
-            if (c.some(x => x.market === leg.market)) continue;
+            const legMarketKey = leg.market + '|' + (leg.playerName || '');
+            if (c.some(x => (x.market + '|' + (x.playerName || '')) === legMarketKey)) continue;
             // Books don't allow ML + spread for the same team in SGP
-            const legIsML = leg.market === 'h2h';
-            const legIsSpread = leg.market === 'spreads';
-            if ((legIsML || legIsSpread) && c.some(x => {
-              const xIsML = x.market === 'h2h'; const xIsSpread = x.market === 'spreads';
-              return (xIsML || xIsSpread) && x.outcome === leg.outcome;
+            if ((leg.market === 'h2h' || leg.market === 'spreads') && c.some(x => {
+              return (x.market === 'h2h' || x.market === 'spreads') && x.outcome === leg.outcome;
             })) continue;
             c.push(leg); cs(i + 1, c); c.pop();
           }
