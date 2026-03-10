@@ -554,15 +554,32 @@ function findBestParlays({ allOutcomes, numLegs, maxNumLegs = '', boostPct, maxB
 
   // numLegs is min legs, maxNumLegs is max legs (defaults to minLegs + 2 if not set).
   const maxLegs = maxNumLegs ? parseInt(maxNumLegs) : numLegs + 2;
+  // Cap pool to best outcome per game+market SIDE (keeps both Over AND Under, favorite AND underdog)
+  // but takes only the top edge outcome per player+market to avoid prop explosion.
+  // This gives ~2 outcomes per core market per game + top prop per player = manageable pool.
+  const poolBySlot = new Map();
+  for (const o of pool) {
+    // Slot key: game + market + outcome name (each side is its own slot)
+    const slotKey = o.gameId + '|' + o.market + '|' + (o.playerName || '') + '|' + o.outcome;
+    if (!poolBySlot.has(slotKey) || o.edge > poolBySlot.get(slotKey).edge) poolBySlot.set(slotKey, o);
+  }
+  // Build top: top 30 by edge (best EV legs) + top 30 by bookDecimal (longest odds/underdogs)
+  // This ensures both high-EV favorites AND long-odds underdogs are in the pool.
+  const allSlots = Array.from(poolBySlot.values());
+  const byEdge = [...allSlots].sort((a, b) => b.edge - a.edge).slice(0, 30);
+  const byOdds = [...allSlots].sort((a, b) => b.bookDecimal - a.bookDecimal).slice(0, 30);
+  const topSet = new Map();
+  for (const o of [...byEdge, ...byOdds]) topSet.set(o.gameId + '|' + o.market + '|' + (o.playerName || '') + '|' + o.outcome, o);
+  const top = Array.from(topSet.values()); // up to 60 unique outcomes
+
   const allCombos = [];
   for (let n = numLegs; n <= maxLegs; n++) {
-    if (pool.length < n) continue;
-    const top = pool; // No cap — all outcomes eligible, including long-odds underdogs
+    if (top.length < n) continue;
     (function c(s, cur) {
       if (cur.length === n) { allCombos.push([...cur]); return; }
       for (let i = s; i < top.length; i++) {
         const leg = top[i];
-        // Block: same game+market already used (prevents Over+Under of same market)
+        // Block: same game+market already used (prevents Over+Under of same market in one parlay)
         if (cur.some(x => x.gameId === leg.gameId && x.market === leg.market && (!leg.playerName || x.playerName === leg.playerName))) continue;
         cur.push(leg); c(i + 1, cur); cur.pop();
       }
