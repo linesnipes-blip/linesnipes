@@ -674,18 +674,8 @@ async function fetchOdds() {
     const odds = data.odds || [];
     if (data.usage) set({ profile: { ...S.profile, fetches_used: data.usage.used } });
     if (!odds.length) { set({ error: 'No games found for this sport right now.', loading: false }); return; }
-    let parlayResults = null;
-    if (S.bonusType === 'parlay_boost') {
-      const filteredOdds = S.liveOnly ? odds.filter(g => new Date(g.commence_time) <= new Date()) : odds;
-      const ao = extractAllOutcomes(filteredOdds, S.sportsbook).filter(o => !S.excludedTeams.has(o.game));
-      parlayResults = findBestParlays({
-        allOutcomes: ao, numLegs: parseInt(S.numLegs) || 2, maxNumLegs: S.maxNumLegs,
-        boostPct: parseFloat(S.boostPct) || 0, maxBet: parseFloat(S.maxBet) || 50,
-        parlayMode: S.parlayMode, legOddsMin: S.minLegOdds, legOddsMax: S.maxLegOdds,
-        parlayMinOdds: S.minOdds, parlayMaxOdds: S.maxOdds,
-      });
-    }
-    set({ odds, parlayResults, loading: false });
+    set({ odds, loading: false });
+    if (S.bonusType === 'parlay_boost') rebuildParlays();
   } catch (err) { set({ error: err.message, loading: false }); }
 }
 
