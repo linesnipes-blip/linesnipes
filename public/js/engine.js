@@ -457,7 +457,7 @@ function scoreParlays(combos, stake, boostPct, topN) {
     const bpay = stake + bp, bd = bpay / stake;
     const ev = cfp * bpay - stake;
     const fairDecimal = 1 / cfp;
-    const evPct = (pd / fairDecimal - 1) * 100;
+    const evPct = (bd / fairDecimal - 1) * 100;
     const legEVs = legs.map(l => ((l.bookDecimal / l.fairDecimal) - 1) * 100);
     const avgLegEV = legEVs.reduce((s, v) => s + v, 0) / legEVs.length;
     const ug = new Set(legs.map(l => l.gameId)).size;
@@ -532,21 +532,24 @@ function findBestParlays({ allOutcomes, numLegs, boostPct, maxBet, parlayMode = 
     return scoreParlays(all, stake, boostPct, topN);
   }
   // Standard
-  // Pool = ALL outcomes (all games, all sides). EV math will rank them naturally.
-  // Cap per-game to best outcome per market (avoid same market both sides in one parlay).
+  // Pool = one outcome per game+market+player combo (best edge wins ties).
+  // This prevents both sides of the same market appearing in one parlay leg.
   const byGameMarket = new Map();
   for (const o of allOutcomes) {
     const key = o.gameId + '|' + o.market + (o.playerName ? '|' + o.playerName : '');
     if (!byGameMarket.has(key) || o.edge > byGameMarket.get(key).edge) byGameMarket.set(key, o);
   }
-  const pool = Array.from(byGameMarket.values()).sort((a, b) => b.edge - a.edge).slice(0, 30);
+  // Sort by edge but keep ALL outcomes — no cap — so underdogs and long-odds legs are included.
+  const pool = Array.from(byGameMarket.values()).sort((a, b) => b.edge - a.edge);
 
-  // numLegs is a minimum — try numLegs, numLegs+1, numLegs+2 and return best across all sizes
+  // numLegs is a minimum — try numLegs, numLegs+1, numLegs+2 and return best EV across all sizes.
   const maxLegs = numLegs + 2;
   const allCombos = [];
   for (let n = numLegs; n <= maxLegs; n++) {
     if (pool.length < n) continue;
-    const top = pool.slice(0, Math.min(15, pool.length));
+    // Use full pool so long-odds underdogs are reachable.
+    // Cap at 20 to prevent combo explosion on large pools.
+    const top = pool.slice(0, Math.min(20, pool.length));
     (function c(s, cur) {
       if (cur.length === n) { allCombos.push([...cur]); return; }
       for (let i = s; i < top.length; i++) {
