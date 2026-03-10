@@ -532,11 +532,25 @@ function findBestParlays({ allOutcomes, numLegs, boostPct, maxBet, parlayMode = 
     return scoreParlays(all, stake, boostPct, topN);
   }
   // Standard
+  // Build pool: best outcome per game, but if a minOdds filter is set, also include
+  // the highest-edge outcome per game that meets the per-leg odds floor — so the
+  // combo builder has a realistic shot at hitting the combined target.
   const bpg = new Map();
   for (const c of allOutcomes) { if (!bpg.has(c.gameId) || c.edge > bpg.get(c.gameId).edge) bpg.set(c.gameId, c); }
   const unc = Array.from(bpg.values()).sort((a, b) => b.edge - a.edge);
   if (unc.length < numLegs) return [];
-  const pool = unc.slice(0, 12);
+  // If a minimum combined odds target is set, supplement the pool with
+  // the best-edge outcome per game that has the longest odds (to help reach the target).
+  let pool = unc.slice(0, 12);
+  if (legOddsMin !== '') {
+    // Also grab the top outcomes regardless of edge, sorted by bookDecimal desc (longest odds first)
+    const byOdds = [...allOutcomes].sort((a, b) => b.bookDecimal - a.bookDecimal);
+    const seenGames = new Set(pool.map(o => o.gameId));
+    for (const o of byOdds) {
+      if (pool.length >= 20) break;
+      if (!seenGames.has(o.gameId)) { pool.push(o); seenGames.add(o.gameId); }
+    }
+  }
   const combos = [];
   (function c(s, cur) { if (cur.length === numLegs) { combos.push([...cur]); return; } for (let i = s; i < pool.length; i++) { if (cur.some(x => x.gameId === pool[i].gameId)) continue; cur.push(pool[i]); c(i + 1, cur); cur.pop(); } })(0, []);
   return scoreParlays(combos, stake, boostPct, topN);

@@ -291,7 +291,9 @@ function mathBlock(lines, open, toggle) {
 // ─── PARLAY RESULTS ───
 function parlayResults() {
   const excluded = S.excludedTeams || new Set();
-  const results = (S.parlayResults || []).filter(p => passFilter(p.parlayDecimal, S.minOdds, S.maxOdds));
+  const allResults = S.parlayResults || [];
+  const results = allResults.filter(p => passFilter(p.parlayDecimal, S.minOdds, S.maxOdds));
+  const oddsFiltered = allResults.length > 0 && results.length === 0 && (S.minOdds !== '' || S.maxOdds !== '');
   const icon = S.parlayMode === 'sgp' ? '🎯' : S.parlayMode === 'sgpx' ? '🔀' : '🔗';
   const ml = S.parlayMode === 'sgp' ? 'SGP' : S.parlayMode === 'sgpx' ? 'SGP+' : 'Parlays';
   return h('div', { cls: 'card', style: { borderColor: 'rgba(155,201,242,.12)', background: 'linear-gradient(180deg,rgba(155,201,242,.025) 0%,transparent 100%)', animation: 'fadeUp .4s ease' } },
@@ -300,7 +302,11 @@ function parlayResults() {
       h('div', { style: { fontFamily: 'var(--display)', fontSize: '16px', fontWeight: '800', color: '#fff' } }, 'Best ' + S.numLegs + '-Leg ' + ml)),
     h('div', { style: { fontSize: '10.5px', color: 'var(--fg3)', marginBottom: '16px' } },
       results.filter(p => p.evPct > 0).length + ' +EV combinations · ' + S.boostPct + '% boost'),
-    !results.length ? h('div', { style: { textAlign: 'center', padding: '24px', color: 'var(--fg3)', fontSize: '13px' } }, 'No parlays found matching your criteria.')
+    !results.length ? h('div', { style: { textAlign: 'center', padding: '24px', color: 'var(--fg3)', fontSize: '13px' } },
+      oddsFiltered
+        ? '⚠️ ' + allResults.length + ' parlay' + (allResults.length !== 1 ? 's' : '') + ' found, but none meet your Min/Max Odds filter (' + (S.minOdds || '—') + ' to ' + (S.maxOdds || '—') + '). Try widening or clearing the odds range.'
+        : 'No parlays found matching your criteria.'
+    )
     : h('div', { style: { display: 'grid', gap: '8px' } },
       ...results.map((p, idx) => {
         const open = S.expandedIdx === idx, pos = p.evPct > 0;
