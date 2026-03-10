@@ -532,29 +532,32 @@ function findBestParlays({ allOutcomes, numLegs, boostPct, maxBet, parlayMode = 
     return scoreParlays(all, stake, boostPct, topN);
   }
   // Standard
-  // Build pool: best outcome per game, but if a minOdds filter is set, also include
-  // the highest-edge outcome per game that meets the per-leg odds floor — so the
-  // combo builder has a realistic shot at hitting the combined target.
-  const bpg = new Map();
-  for (const c of allOutcomes) { if (!bpg.has(c.gameId) || c.edge > bpg.get(c.gameId).edge) bpg.set(c.gameId, c); }
-  const unc = Array.from(bpg.values()).sort((a, b) => b.edge - a.edge);
-  if (unc.length < numLegs) return [];
-  // If a minimum combined odds target is set, supplement the pool with
-  // the best-edge outcome per game that has the longest odds (to help reach the target).
-  let pool = unc.slice(0, 12);
-  if (legOddsMin !== '' || parlayMinOdds !== '') {
-    // Supplement pool with longest-odds outcomes per game to help reach combined odds target
-    const byOdds = [...allOutcomes].sort((a, b) => b.bookDecimal - a.bookDecimal);
-    const seenGames = new Set(pool.map(o => o.gameId));
-    for (const o of byOdds) {
-      if (pool.length >= 20) break;
-      if (!seenGames.has(o.gameId)) { pool.push(o); seenGames.add(o.gameId); }
-    }
+  // Pool = ALL outcomes (all games, all sides). EV math will rank them naturally.
+  // Cap per-game to best outcome per market (avoid same market both sides in one parlay).
+  const byGameMarket = new Map();
+  for (const o of allOutcomes) {
+    const key = o.gameId + '|' + o.market + (o.playerName ? '|' + o.playerName : '');
+    if (!byGameMarket.has(key) || o.edge > byGameMarket.get(key).edge) byGameMarket.set(key, o);
   }
-  const combos = [];
-  (function c(s, cur) { if (cur.length === numLegs) { combos.push([...cur]); return; } for (let i = s; i < pool.length; i++) { if (cur.some(x => x.gameId === pool[i].gameId)) continue; cur.push(pool[i]); c(i + 1, cur); cur.pop(); } })(0, []);
-  // Filter scored parlays by combined odds target before returning
-  const scored = scoreParlays(combos, stake, boostPct, topN * 5);
+  const pool = Array.from(byGameMarket.values()).sort((a, b) => b.edge - a.edge).slice(0, 30);
+
+  // numLegs is a minimum — try numLegs, numLegs+1, numLegs+2 and return best across all sizes
+  const maxLegs = numLegs + 2;
+  const allCombos = [];
+  for (let n = numLegs; n <= maxLegs; n++) {
+    if (pool.length < n) continue;
+    const top = pool.slice(0, Math.min(15, pool.length));
+    (function c(s, cur) {
+      if (cur.length === n) { allCombos.push([...cur]); return; }
+      for (let i = s; i < top.length; i++) {
+        if (cur.some(x => x.gameId === top[i].gameId)) continue;
+        cur.push(top[i]); c(i + 1, cur); cur.pop();
+      }
+    })(0, []);
+  }
+
+  // Score all combos, filter by combined odds target, return top N by EV%
+  const scored = scoreParlays(allCombos, stake, boostPct, topN * 10);
   const mn = amToDec(parlayMinOdds), mx = amToDec(parlayMaxOdds);
   const filtered = scored.filter(p => {
     if (mn != null && p.parlayDecimal < mn) return false;
