@@ -292,7 +292,7 @@ function mathBlock(lines, open, toggle) {
 function parlayResults() {
   const excluded = S.excludedTeams || new Set();
   const results = S.parlayResults || [];
-  const noOddsMatch = results.length === 0 && (S.minOdds !== '' || S.maxOdds !== '');
+  const noOddsMatch = false; // Min/Max Odds only applies to single bets, not parlays
   const icon = S.parlayMode === 'sgp' ? '🎯' : S.parlayMode === 'sgpx' ? '🔀' : '🔗';
   const ml = S.parlayMode === 'sgp' ? 'SGP' : S.parlayMode === 'sgpx' ? 'SGP+' : 'Parlays';
   return h('div', { cls: 'card', style: { borderColor: 'rgba(155,201,242,.12)', background: 'linear-gradient(180deg,rgba(155,201,242,.025) 0%,transparent 100%)', animation: 'fadeUp .4s ease' } },
@@ -675,7 +675,7 @@ function pgApp() {
         h('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '4px' } },
           ...BOOKS.map(b => h('button', { cls: 'pill' + (S.sportsbook === b.key ? ' on' : ''),
             style: S.sportsbook === b.key ? { borderColor: b.c + '55', color: b.c, background: b.c + '14' } : {},
-            onClick: () => set({ sportsbook: b.key }) },
+            onClick: () => { set({ sportsbook: b.key }); rebuildParlays(); } },
             h('span', { style: { fontSize: '10px', fontWeight: '700' } }, b.label)))),
       ),
       // Sport & Fetch

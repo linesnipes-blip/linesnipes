@@ -675,7 +675,7 @@ async function fetchOdds() {
     if (data.usage) set({ profile: { ...S.profile, fetches_used: data.usage.used } });
     if (!odds.length) { set({ error: 'No games found for this sport right now.', loading: false }); return; }
     set({ odds, loading: false });
-    if (S.bonusType === 'parlay_boost') rebuildParlays();
+    if (S.bonusType === 'parlay_boost') setTimeout(() => rebuildParlays(), 0);
   } catch (err) { set({ error: err.message, loading: false }); }
 }
 
