@@ -497,38 +497,52 @@ function findBestParlays({ allOutcomes, numLegs, maxNumLegs = '', boostPct, maxB
     for (const o of allOutcomes) { if (!byGame.has(o.gameId)) byGame.set(o.gameId, []); byGame.get(o.gameId).push(o); }
     const all = [];
     for (const [, go] of byGame) {
-      // Keep best outcome per market+side slot (both favorite AND underdog, Over AND Under, all props)
-      const slotMap = new Map();
+      // Group by market key (market+player). Keep top 2 outcomes per market key (both sides).
+      const byMkt = new Map();
       for (const o of go) {
-        const slot = o.market + '|' + (o.playerName || '') + '|' + o.outcome;
-        if (!slotMap.has(slot) || o.edge > slotMap.get(slot).edge) slotMap.set(slot, o);
+        const mk = o.market + '|' + (o.playerName || '');
+        if (!byMkt.has(mk)) byMkt.set(mk, []);
+        byMkt.get(mk).push(o);
       }
-      const allSlotsSGP = Array.from(slotMap.values());
-      // Cap per game: top 30 by edge + top 20 by book odds to include underdogs/props
-      const byEdgeSGP = [...allSlotsSGP].sort((a, b) => b.edge - a.edge).slice(0, 30);
-      const byOddsSGP = [...allSlotsSGP].sort((a, b) => b.bookDecimal - a.bookDecimal).slice(0, 20);
-      const poolMap = new Map();
-      for (const o of [...byEdgeSGP, ...byOddsSGP]) poolMap.set(o.market + '|' + (o.playerName || '') + '|' + o.outcome, o);
-      const pool = Array.from(poolMap.values());
-      // Count distinct markets — need at least numLegs distinct markets
-      const distinctMarkets = new Set(pool.map(o => o.market + '|' + (o.playerName || ''))).size;
-      if (distinctMarkets < numLegs) continue;
-      (function c(s, cur) {
-        if (cur.length === numLegs) { all.push([...cur]); return; }
-        for (let i = s; i < pool.length; i++) {
-          const leg = pool[i];
-          const legMarketKey = leg.market + '|' + (leg.playerName || '');
-          // No duplicate market+player in same SGP
-          if (cur.some(x => (x.market + '|' + (x.playerName || '')) === legMarketKey)) continue;
-          // Books don't allow ML + spread for the same team in SGP
-          const legIsML = leg.market === 'h2h';
-          const legIsSpread = leg.market === 'spreads';
-          if ((legIsML || legIsSpread) && cur.some(x => {
-            return (x.market === 'h2h' || x.market === 'spreads') && x.outcome === leg.outcome;
-          })) continue;
-          cur.push(leg); c(i + 1, cur); cur.pop();
+      // Sort each market's outcomes by edge desc, keep top 2 (both sides)
+      for (const [mk, outs] of byMkt) byMkt.set(mk, outs.sort((a, b) => b.edge - a.edge).slice(0, 2));
+      // Get sorted list of market keys: core markets first (h2h, spreads, totals), then props by edge
+      const coreOrder = ['h2h', 'spreads', 'totals'];
+      const mktKeys = Array.from(byMkt.keys()).sort((a, b) => {
+        const ai = coreOrder.findIndex(c => a.startsWith(c));
+        const bi = coreOrder.findIndex(c => b.startsWith(c));
+        if (ai >= 0 && bi < 0) return -1;
+        if (bi >= 0 && ai < 0) return 1;
+        const aEdge = Math.max(...byMkt.get(a).map(o => o.edge));
+        const bEdge = Math.max(...byMkt.get(b).map(o => o.edge));
+        return bEdge - aEdge;
+      });
+      if (mktKeys.length < numLegs) continue;
+      // Build combos: pick numLegs distinct market keys, then one outcome per key
+      // Hard cap: max 500 combos per game to prevent OOM
+      const MAX_PER_GAME = 500;
+      const gameCombos = [];
+      (function pickMkts(start, chosenMkts) {
+        if (gameCombos.length >= MAX_PER_GAME) return;
+        if (chosenMkts.length === numLegs) {
+          // For each chosen set of market keys, pick one outcome per key
+          (function pickOuts(idx, cur) {
+            if (gameCombos.length >= MAX_PER_GAME) return;
+            if (idx === chosenMkts.length) { gameCombos.push([...cur]); return; }
+            for (const o of byMkt.get(chosenMkts[idx])) {
+              // No ML + spread for same team
+              if ((o.market === 'h2h' || o.market === 'spreads') && cur.some(x =>
+                (x.market === 'h2h' || x.market === 'spreads') && x.outcome === o.outcome)) continue;
+              cur.push(o); pickOuts(idx + 1, cur); cur.pop();
+            }
+          })(0, []);
+          return;
+        }
+        for (let i = start; i < mktKeys.length; i++) {
+          chosenMkts.push(mktKeys[i]); pickMkts(i + 1, chosenMkts); chosenMkts.pop();
         }
       })(0, []);
+      for (const combo of gameCombos) all.push(combo);
     }
     return scoreParlays(all, stake, boostPct, topN, parlayMinOdds, parlayMaxOdds);
   }
@@ -537,21 +551,15 @@ function findBestParlays({ allOutcomes, numLegs, maxNumLegs = '', boostPct, maxB
     for (const o of allOutcomes) { if (!byGame.has(o.gameId)) byGame.set(o.gameId, []); byGame.get(o.gameId).push(o); }
     const gamePools = new Map();
     for (const [gid, go] of byGame) {
-      // Keep best per market+side slot (both sides of every market + all props)
-      const slotMap = new Map();
+      // Group by market key, keep top 2 per market (both sides)
+      const byMktX = new Map();
       for (const o of go) {
-        const slot = o.market + '|' + (o.playerName || '') + '|' + o.outcome;
-        if (!slotMap.has(slot) || o.edge > slotMap.get(slot).edge) slotMap.set(slot, o);
+        const mk = o.market + '|' + (o.playerName || '');
+        if (!byMktX.has(mk)) byMktX.set(mk, []);
+        byMktX.get(mk).push(o);
       }
-      const allSlots = Array.from(slotMap.values());
-      const distinctMarkets = new Set(allSlots.map(o => o.market + '|' + (o.playerName || ''))).size;
-      // Cap per game: top 30 by edge + top 20 by odds
-      const byEdgeSGPX = [...allSlots].sort((a, b) => b.edge - a.edge).slice(0, 30);
-      const byOddsSGPX = [...allSlots].sort((a, b) => b.bookDecimal - a.bookDecimal).slice(0, 20);
-      const sgpxMap = new Map();
-      for (const o of [...byEdgeSGPX, ...byOddsSGPX]) sgpxMap.set(o.market + '|' + (o.playerName || '') + '|' + o.outcome, o);
-      const cappedSlots = Array.from(sgpxMap.values());
-      if (distinctMarkets >= 2) gamePools.set(gid, cappedSlots);
+      for (const [mk, outs] of byMktX) byMktX.set(mk, outs.sort((a, b) => b.edge - a.edge).slice(0, 2));
+      if (byMktX.size >= 2) gamePools.set(gid, byMktX);
     }
     const bpg = new Map();
     for (const o of allOutcomes) { if (!bpg.has(o.gameId) || o.edge > bpg.get(o.gameId).edge) bpg.set(o.gameId, o); }
@@ -560,23 +568,32 @@ function findBestParlays({ allOutcomes, numLegs, maxNumLegs = '', boostPct, maxB
       const sgpPool = gamePools.get(pgid);
       const cross = Array.from(bpg.entries()).filter(([g]) => g !== pgid).map(([, o]) => o).sort((a, b) => b.edge - a.edge).slice(0, 8);
       if (!cross.length) continue;
-      for (let sc = 2; sc <= Math.min(numLegs - 1, sgpPool.length); sc++) {
+      for (let sc = 2; sc <= Math.min(numLegs - 1, sgpPool.size); sc++) {
         const cc = numLegs - sc;
         if (cc < 1 || cc > cross.length) continue;
         const sgpC = [];
-        (function cs(s, c) {
-          if (c.length === sc) { sgpC.push([...c]); return; }
-          for (let i = s; i < sgpPool.length; i++) {
-            const leg = sgpPool[i];
-            const legMarketKey = leg.market + '|' + (leg.playerName || '');
-            if (c.some(x => (x.market + '|' + (x.playerName || '')) === legMarketKey)) continue;
-            // Books don't allow ML + spread for the same team in SGP
-            if ((leg.market === 'h2h' || leg.market === 'spreads') && c.some(x => {
-              return (x.market === 'h2h' || x.market === 'spreads') && x.outcome === leg.outcome;
-            })) continue;
-            c.push(leg); cs(i + 1, c); c.pop();
+        const sgpCombosX = [];
+        const MAX_SGP_INNER = 100;
+        const mktKeysX = Array.from(sgpPool.keys());
+        (function pickMktsX(start, chosenMkts) {
+          if (sgpCombosX.length >= MAX_SGP_INNER) return;
+          if (chosenMkts.length === sc) {
+            (function pickOutsX(idx, cur) {
+              if (sgpCombosX.length >= MAX_SGP_INNER) return;
+              if (idx === chosenMkts.length) { sgpCombosX.push([...cur]); return; }
+              for (const o of sgpPool.get(chosenMkts[idx])) {
+                if ((o.market === 'h2h' || o.market === 'spreads') && cur.some(x =>
+                  (x.market === 'h2h' || x.market === 'spreads') && x.outcome === o.outcome)) continue;
+                cur.push(o); pickOutsX(idx + 1, cur); cur.pop();
+              }
+            })(0, []);
+            return;
+          }
+          for (let i = start; i < mktKeysX.length; i++) {
+            chosenMkts.push(mktKeysX[i]); pickMktsX(i + 1, chosenMkts); chosenMkts.pop();
           }
         })(0, []);
+        for (const combo of sgpCombosX) sgpC.push(combo);
         const crC = [];
         (function cx(s, c) { if (c.length === cc) { crC.push([...c]); return; } for (let i = s; i < cross.length; i++) { if (c.some(x => x.gameId === cross[i].gameId)) continue; c.push(cross[i]); cx(i + 1, c); c.pop(); } })(0, []);
         for (const sg of sgpC.slice(0, 10)) for (const cr of crC.slice(0, 10)) all.push([...sg, ...cr]);
