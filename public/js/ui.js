@@ -367,14 +367,14 @@ function betCard(r, idx, compact) {
         h('div', { cls: 'sbox' }, h('div', { cls: 'sl' }, 'Fair Prob'), h('div', { cls: 'sv' }, (r.fairProb * 100).toFixed(2) + '%')),
         h('div', { cls: 'sbox' }, h('div', { cls: 'sl' }, 'EV'), h('div', { cls: 'sv', style: { color: pos ? '#00c853' : '#ff4757' } }, (pos ? '+' : '') + '$' + r.ev.toFixed(2)))),
       mathBlock(r.math, S.expandedMath === idx, () => set({ expandedMath: S.expandedMath === idx ? null : idx })),
-      r.deepLink ? deepLinkBtn(r.deepLink, S.sportsbook) : null,
+      r.deepLink ? deepLinkBtn(r.deepLink, S.sportsbook, r) : null,
     ) : null,
   );
 }
 
 // ─── DEEP LINK BUTTON ───
 const ONE_CLICK_BOOKS = ['draftkings', 'fanduel'];
-function deepLinkBtn(link, bookKey) {
+function deepLinkBtn(link, bookKey, result) {
   const book = BOOKS.find(b => b.key === bookKey);
   if (!book) return null;
   if (!ONE_CLICK_BOOKS.includes(bookKey)) {
@@ -384,6 +384,21 @@ function deepLinkBtn(link, bookKey) {
   }
   if (!link) return null;
   const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+  // DraftKings prop deep links don't reliably populate the bet slip.
+  // For DK props: open DK search for the player name instead.
+  const isDKProp = bookKey === 'draftkings' && result && result.isProp && result.playerName;
+  if (isDKProp) {
+    const searchQuery = encodeURIComponent(result.playerName);
+    const searchHref = isMobile
+      ? 'dksb://sb/search?q=' + searchQuery
+      : 'https://sportsbook.draftkings.com/search?q=' + searchQuery;
+    return h('div', { style: { marginTop: '8px' } },
+      makePlaceBtn(searchHref, book, '🔍 Find ' + result.playerName + ' on DraftKings'),
+      h('div', { style: { marginTop: '6px', padding: '8px 12px', borderRadius: '6px', background: 'rgba(255,180,0,.08)', border: '1px solid rgba(255,180,0,.2)', color: 'rgba(255,180,0,.85)', fontSize: '10px', fontWeight: '600', fontFamily: 'var(--display)', textAlign: 'center' } },
+        '⚠️ DraftKings prop links don't auto-populate — search opens to help you find the bet'
+      )
+    );
+  }
   let href = link;
   if (isMobile) {
     if (bookKey === 'draftkings' && link.includes('sportsbook.draftkings.com')) {
@@ -528,7 +543,7 @@ function topPicks() {
               h('div', { cls: 'sbox' }, h('div', { cls: 'sl' }, 'Fair Prob'), h('div', { cls: 'sv' }, (r.fairProb * 100).toFixed(2) + '%')),
               h('div', { cls: 'sbox' }, h('div', { cls: 'sl' }, 'EV'), h('div', { cls: 'sv', style: { color: pos ? '#00c853' : '#ff4757' } }, (pos ? '+' : '') + '$' + r.ev.toFixed(2)))),
             mathBlock(r.math, S.expandedMath === tpIdx, () => set({ expandedMath: S.expandedMath === tpIdx ? null : tpIdx })),
-            r.deepLink ? deepLinkBtn(r.deepLink, S.sportsbook) : null,
+            r.deepLink ? deepLinkBtn(r.deepLink, S.sportsbook, r) : null,
           ) : null,
         );
       })),
