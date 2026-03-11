@@ -626,23 +626,29 @@ function findBestParlays({ allOutcomes, numLegs, maxNumLegs = '', boostPct, maxB
     const slotKey = o.gameId + '|' + o.market + '|' + (o.playerName || '') + '|' + o.outcome;
     if (!poolBySlot.has(slotKey) || o.edge > poolBySlot.get(slotKey).edge) poolBySlot.set(slotKey, o);
   }
-  // Build top: top 30 by edge (best EV legs) + top 30 by bookDecimal (longest odds/underdogs)
-  // This ensures both high-EV favorites AND long-odds underdogs are in the pool.
   const allSlots = Array.from(poolBySlot.values());
-  const byEdge = [...allSlots].sort((a, b) => b.edge - a.edge).slice(0, 30);
-  const byOdds = [...allSlots].sort((a, b) => b.bookDecimal - a.bookDecimal).slice(0, 30);
+  // Pool size scales DOWN with leg count to keep combos manageable:
+  // 2-leg: 40 pool → 780 combos max
+  // 3-leg: 30 pool → 4060 combos max
+  // 4-leg: 22 pool → 7315 combos max
+  const poolSizeForLegs = Math.max(22, Math.min(40, 44 - (maxLegs * 3)));
+  const byEdge = [...allSlots].sort((a, b) => b.edge - a.edge).slice(0, Math.ceil(poolSizeForLegs * 0.6));
+  const byOdds = [...allSlots].sort((a, b) => b.bookDecimal - a.bookDecimal).slice(0, Math.ceil(poolSizeForLegs * 0.4));
   const topSet = new Map();
   for (const o of [...byEdge, ...byOdds]) topSet.set(o.gameId + '|' + o.market + '|' + (o.playerName || '') + '|' + o.outcome, o);
-  const top = Array.from(topSet.values()); // up to 60 unique outcomes
+  const top = Array.from(topSet.values());
 
+  const MAX_COMBOS = 8000; // Hard cap — prevents OOM on any leg count
   const allCombos = [];
   for (let n = numLegs; n <= maxLegs; n++) {
     if (top.length < n) continue;
+    if (allCombos.length >= MAX_COMBOS) break;
     (function c(s, cur) {
+      if (allCombos.length >= MAX_COMBOS) return;
       if (cur.length === n) { allCombos.push([...cur]); return; }
       for (let i = s; i < top.length; i++) {
+        if (allCombos.length >= MAX_COMBOS) return;
         const leg = top[i];
-        // Block: same game+market already used (prevents Over+Under of same market in one parlay)
         if (cur.some(x => x.gameId === leg.gameId && x.market === leg.market && (!leg.playerName || x.playerName === leg.playerName))) continue;
         cur.push(leg); c(i + 1, cur); cur.pop();
       }
@@ -694,6 +700,10 @@ function analyzeGame({ game, bookKey, bonusType, boostPct, maxBet }) {
         if (!f) continue;
         const playerName = o.description || o.name;
         const r = calcEV({ bonusType, boostPct, maxBet, bookDecimal: o.price, fairProb: f.fairProb });
+        // DK prop deep link: betLink is most reliable. If missing, fall back to event page.
+        const propDeepLink = o.betLink || o.link ||
+          (bookKey === 'draftkings' && game.id ? 'https://sportsbook.draftkings.com/event/' + game.id : null);
+        if (bookKey === 'draftkings' && !o.betLink && !o.link) console.log('[LS DK prop] no link for', playerName, o.name, '— betLink:', o.betLink, 'link:', o.link, 'sid:', o.sid);
         results.push({
           ...r, market: m.key,
           marketLabel: getMarketLabel(m.key), isProp: true,
@@ -701,7 +711,7 @@ function analyzeGame({ game, bookKey, bonusType, boostPct, maxBet }) {
           fairProb: f.fairProb, fairDecimal: f.fairDecimal, sharpBook: sharpTitle,
           gameShort: game.away_team.split(' ').pop() + ' @ ' + game.home_team.split(' ').pop(),
           playerName, devigMethod: 'Multiplicative',
-          deepLink: o.betLink || o.link || null, sid: o.sid || null,
+          deepLink: propDeepLink, sid: o.sid || null,
         });
       }
     } else {
