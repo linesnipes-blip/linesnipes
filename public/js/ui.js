@@ -384,21 +384,7 @@ function deepLinkBtn(link, bookKey, result) {
   }
   if (!link) return null;
   const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-  // DraftKings prop deep links don't reliably populate the bet slip.
-  // For DK props: open DK search for the player name instead.
-  const isDKProp = bookKey === 'draftkings' && result && result.isProp && result.playerName;
-  if (isDKProp) {
-    const searchQuery = encodeURIComponent(result.playerName);
-    const searchHref = isMobile
-      ? 'dksb://sb/search?q=' + searchQuery
-      : 'https://sportsbook.draftkings.com/search?q=' + searchQuery;
-    return h('div', { style: { marginTop: '8px' } },
-      makePlaceBtn(searchHref, book, '🔍 Find ' + result.playerName + ' on DraftKings'),
-      h('div', { style: { marginTop: '6px', padding: '8px 12px', borderRadius: '6px', background: 'rgba(255,180,0,.08)', border: '1px solid rgba(255,180,0,.2)', color: 'rgba(255,180,0,.85)', fontSize: '10px', fontWeight: '600', fontFamily: 'var(--display)', textAlign: 'center' } },
-        '⚠️ DraftKings prop links don't auto-populate — search opens to help you find the bet'
-      )
-    );
-  }
+
   let href = link;
   if (isMobile) {
     if (bookKey === 'draftkings' && link.includes('sportsbook.draftkings.com')) {
@@ -417,7 +403,7 @@ function parlayDeepLinkBtn(legs, bookKey) {
   if (!book) return null;
   // For DK: extract SID from each leg's deepLink URL (?outcomes=XXXXXXX)
   // o.sid from Odds API is often null — the SID lives inside the link itself
-  // DK parlay URL format: /?outcomes=SID1,SID2,SID3
+  // DK parlay URL format: /?outcomes=SID1+SID2+SID3
   if (bookKey === 'draftkings') {
     const sids = legs.map(l => {
       // Try l.sid first, fall back to parsing it out of the deepLink URL
@@ -428,7 +414,7 @@ function parlayDeepLinkBtn(legs, bookKey) {
     }).filter(Boolean);
     // Build the parlay URL with all SIDs we could extract (need at least 2 legs)
     if (sids.length >= 2) {
-      const href = 'https://sportsbook.draftkings.com/?outcomes=' + sids.join('%2C');
+      const href = 'https://sportsbook.draftkings.com/?outcomes=' + sids.join('+');
       return makePlaceBtn(href, book, 'Add Parlay on ' + book.label);
     }
   }
