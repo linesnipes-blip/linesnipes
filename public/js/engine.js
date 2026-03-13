@@ -137,6 +137,13 @@ const BOOKS = [
 ];
 
 const SHARP = ['pinnacle'];
+// Option 2: Minimum fair probability — reject outcomes where sharp data implies <3% chance.
+const MIN_FAIR_PROB = 0.03;
+// Option 3: For core markets, require sharp data has both sides before devigging.
+function sharpHasBothSides(outcomes, marketKey) {
+  if (!outcomes || outcomes.length < 2) return false;
+  return true;
+}
 
 const PRIO_SPORTS = [
   'americanfootball_ncaaf',
@@ -416,6 +423,7 @@ function extractAllOutcomes(games, bookKey) {
           const f = fair.find(fi => fi.name === o.name);
           if (!f) continue;
           const playerName = o.description || o.name;
+          if (f.fairProb < MIN_FAIR_PROB) continue;
           out.push({
             gameId: g.id, game: `${g.away_team} @ ${g.home_team}`,
             gameShort: `${g.away_team.split(' ').pop()} @ ${g.home_team.split(' ').pop()}`,
@@ -428,10 +436,12 @@ function extractAllOutcomes(games, bookKey) {
           });
         }
       } else {
+        if (!sharpHasBothSides(sharpOutcomes, m.key)) continue;
         const fair = removeVig(sharpOutcomes, m.key);
         for (const o of m.outcomes) {
           const f = fair.find(fi => fi.name === o.name && (fi.point === o.point || (!fi.point && !o.point)));
           if (!f) continue;
+          if (f.fairProb < MIN_FAIR_PROB) continue;
           out.push({
             gameId: g.id, game: `${g.away_team} @ ${g.home_team}`,
             gameShort: `${g.away_team.split(' ').pop()} @ ${g.home_team.split(' ').pop()}`,
@@ -699,6 +709,7 @@ function analyzeGame({ game, bookKey, bonusType, boostPct, maxBet }) {
         const f = fair.find(fi => fi.name === o.name);
         if (!f) continue;
         const playerName = o.description || o.name;
+        if (f.fairProb < MIN_FAIR_PROB) continue;
         const r = calcEV({ bonusType, boostPct, maxBet, bookDecimal: o.price, fairProb: f.fairProb });
         // DK prop deep link: betLink is most reliable. If missing, fall back to event page.
         const propDeepLink = o.betLink || o.link ||
@@ -715,10 +726,12 @@ function analyzeGame({ game, bookKey, bonusType, boostPct, maxBet }) {
         });
       }
     } else {
+      if (!sharpHasBothSides(sharpOutcomes, m.key)) continue;
       const fair = removeVig(sharpOutcomes, m.key);
       for (const o of m.outcomes) {
         const f = fair.find(fi => fi.name === o.name && (fi.point === o.point || (!fi.point && !o.point)));
         if (!f) continue;
+        if (f.fairProb < MIN_FAIR_PROB) continue;
         const r = calcEV({ bonusType, boostPct, maxBet, bookDecimal: o.price, fairProb: f.fairProb });
         results.push({
           ...r, market: m.key,
@@ -759,7 +772,8 @@ async function fetchOdds() {
   set({ loading: true, error: '', odds: null, singleResults: null, parlayResults: null, selectedGame: null });
   try {
     const bk = BOOKS.map(b => b.key).join(',') + ',pinnacle,betfair_ex_eu';
-    const data = await apiFetch('odds?sport=' + S.sport + '&bookmakers=' + bk);
+    const isParlay = S.bonusType === 'parlay_boost';
+    const data = await apiFetch('odds?sport=' + S.sport + '&bookmakers=' + bk + (isParlay ? '&noProps=true' : ''));
     if (data.error) { set({ error: data.message || data.error, loading: false }); return; }
     const odds = data.odds || [];
     if (data.usage) set({ profile: { ...S.profile, fetches_used: data.usage.used } });
